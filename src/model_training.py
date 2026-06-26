@@ -3,10 +3,9 @@ import pandas as pd
 import numpy as np
 from sklearn.ensemble import RandomForestClassifier, GradientBoostingClassifier
 from sklearn.linear_model import LogisticRegression
-from sklearn.svm import SVC
 from sklearn.neighbors import KNeighborsClassifier
 from sklearn.tree import DecisionTreeClassifier
-from sklearn.model_selection import GridSearchCV, cross_val_score
+from sklearn.model_selection import GridSearchCV
 from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score, roc_auc_score
 import xgboost as xgb
 import lightgbm as lgb
@@ -24,7 +23,7 @@ class ModelTrainer:
         self.results = {}
         
     def create_models(self):
-        """Створення словника з різними моделями"""
+        """Створення словника з різними моделями (без SVM)"""
         models = {
             'Logistic Regression': LogisticRegression(random_state=42, max_iter=1000),
             'Random Forest': RandomForestClassifier(random_state=42, n_jobs=-1),
@@ -32,8 +31,7 @@ class ModelTrainer:
             'XGBoost': xgb.XGBClassifier(random_state=42, use_label_encoder=False, eval_metric='logloss'),
             'LightGBM': lgb.LGBMClassifier(random_state=42, verbose=-1),
             'Decision Tree': DecisionTreeClassifier(random_state=42),
-            'KNN': KNeighborsClassifier(),
-            'SVM': SVC(random_state=42, probability=True)
+            'KNN': KNeighborsClassifier()
         }
         self.models = models
         return models
@@ -79,11 +77,6 @@ class ModelTrainer:
                 'n_neighbors': [3, 5, 7, 9, 11],
                 'weights': ['uniform', 'distance'],
                 'metric': ['euclidean', 'manhattan', 'minkowski']
-            },
-            'SVM': {
-                'C': [0.1, 1, 10],
-                'kernel': ['rbf', 'linear', 'poly'],
-                'gamma': ['scale', 'auto']
             }
         }
         return param_grids.get(model_name, {})
@@ -130,7 +123,7 @@ class ModelTrainer:
         return metrics
     
     def train_all_models(self, X_train, y_train, X_test, y_test, tune_hyperparams=True):
-        """Навчання та оцінка всіх моделей"""
+        """Навчання та оцінка всіх моделей (без SVM)"""
         self.create_models()
         
         for model_name in self.models.keys():
@@ -214,7 +207,7 @@ if __name__ == "__main__":
     # Розділення даних
     X_train, X_test, y_train, y_test = preprocessor.split_data(features, target)
     
-    # Навчання моделей
+    # Навчання моделей (без SVM)
     trainer = ModelTrainer()
     best_model = trainer.train_all_models(X_train, y_train, X_test, y_test, tune_hyperparams=True)
     
