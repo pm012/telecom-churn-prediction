@@ -24,14 +24,14 @@ dmypy.json
 #*.ipynb
 
 # Data
-data/raw/
+#data/raw/
 data/processed/
 # *.csv
 *.xlsx
 *.db
 
 # Models
-*.pkl
+# *.pkl
 *.joblib
 *.h5
 *.keras
