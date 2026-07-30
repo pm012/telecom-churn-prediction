@@ -21,7 +21,7 @@ dmypy.json
 
 # Jupyter Notebooks
 .ipynb_checkpoints/
-*.ipynb
+#*.ipynb
 
 # Data
 data/raw/
