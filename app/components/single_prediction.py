@@ -83,6 +83,10 @@ class SinglePredictionComponent:
         st.divider()
         st.header("Результат прогнозування")
         
+        # Інформація про модель
+        model_used = result.get('model_used', 'N/A')
+        st.info(f"**Використана модель:** {model_used}")
+        
         prob = result['probability']
         pred = result['prediction']
         risk = result['risk_level']

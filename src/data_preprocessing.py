@@ -19,11 +19,13 @@ class DataPreprocessor:
         self.numeric_columns = self.base_numeric_columns.copy()
         
     def load_data(self, file_path):
+        """Завантаження даних з CSV файлу"""
         df = pd.read_csv(file_path, na_values=['', ' ', 'NA', 'null', 'NULL'])
         print(f"Завантажено {len(df)} рядків")
         return df
     
     def clean_data(self, df):
+        """Очищення даних від пропусків та аномалій"""
         df_clean = df.copy()
         
         if 'id' in df_clean.columns:
@@ -45,22 +47,18 @@ class DataPreprocessor:
             if 'reamining_contract_missing' not in self.numeric_columns:
                 self.numeric_columns.append('reamining_contract_missing')
         
-        # Заповнення пропусків для всіх числових колонок
         for col in self.base_numeric_columns:
             if col in df_clean.columns and df_clean[col].isnull().any():
                 median_val = df_clean[col].median()
                 df_clean[col].fillna(median_val, inplace=True)
                 print(f"Заповнено пропуски в '{col}' медіаною: {median_val:.2f}")
         
-        # Для категоріальних колонок
         for col in self.categorical_columns:
             if col in df_clean.columns and df_clean[col].isnull().any():
                 mode_val = df_clean[col].mode()[0]
                 df_clean[col].fillna(mode_val, inplace=True)
                 print(f"Заповнено пропуски в '{col}' модою: {mode_val}")
         
-        # ВАЖЛИВО: Переконуємося, що NaN більше немає
-        # Заповнюємо всі залишки NaN нулем (безпечно)
         if df_clean.isnull().any().any():
             print("\nЗаповнення залишкових NaN значенням 0...")
             df_clean = df_clean.fillna(0)
@@ -75,6 +73,7 @@ class DataPreprocessor:
         return df_clean
     
     def encode_categorical(self, df):
+        """Кодування категоріальних змінних"""
         df_encoded = df.copy()
         
         for col in self.categorical_columns:
@@ -87,6 +86,7 @@ class DataPreprocessor:
         return df_encoded
     
     def scale_features(self, df, fit=True):
+        """Нормалізація числових ознак"""
         df_scaled = df.copy()
         
         available_numeric = [col for col in self.numeric_columns if col in df_scaled.columns]
@@ -106,6 +106,7 @@ class DataPreprocessor:
         return df_scaled
     
     def prepare_features(self, df, is_training=True):
+        """Підготовка всіх ознак для моделі"""
         print("\n" + "="*50)
         print("ПОЧАТОК ПІДГОТОВКИ ДАНИХ")
         print("="*50)
@@ -128,6 +129,10 @@ class DataPreprocessor:
         
         df_scaled = self.scale_features(df_encoded, fit=is_training)
         
+        # ЗБЕРІГАЄМО ОБРОБЛЕНІ ДАНІ
+        if is_training:
+            self.save_processed_data(df_scaled, target)
+        
         if is_training and target is not None:
             print("\nПідготовку даних завершено")
             print(f"\nРозподіл цільової змінної:")
@@ -138,7 +143,21 @@ class DataPreprocessor:
         print("\nПідготовку даних завершено")
         return df_scaled
     
+    def save_processed_data(self, features, target):
+        """Збереження оброблених даних в data/processed/"""
+        os.makedirs('data/processed', exist_ok=True)
+        
+        # Об'єднуємо ознаки та ціль
+        processed_df = features.copy()
+        processed_df['churn'] = target.values
+        
+        # Зберігаємо
+        processed_df.to_csv('data/processed/processed_data.csv', index=False)
+        print(f"\n💾 Оброблені дані збережено в data/processed/processed_data.csv")
+        print(f"   Розмір: {processed_df.shape}")
+    
     def split_data(self, features, target, test_size=0.2, random_state=42):
+        """Розділення даних на тренувальні та тестові"""
         X_train, X_test, y_train, y_test = train_test_split(
             features, target, test_size=test_size, random_state=random_state, 
             stratify=target
@@ -153,6 +172,7 @@ class DataPreprocessor:
         return X_train, X_test, y_train, y_test
     
     def save_preprocessor(self, path='models/preprocessor.pkl'):
+        """Збереження препроцесора"""
         os.makedirs(os.path.dirname(path), exist_ok=True)
         preprocessor_data = {
             'scaler': self.scaler,
@@ -163,9 +183,10 @@ class DataPreprocessor:
             'base_numeric_columns': self.base_numeric_columns
         }
         joblib.dump(preprocessor_data, path)
-        print(f"\nПрепроцесор збережено в {path}")
+        print(f"\n💾 Препроцесор збережено в {path}")
     
     def load_preprocessor(self, path='models/preprocessor.pkl'):
+        """Завантаження препроцесора"""
         data = joblib.load(path)
         self.scaler = data['scaler']
         self.label_encoders = data['label_encoders']

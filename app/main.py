@@ -1,12 +1,11 @@
 # app/main.py
 import streamlit as st
+import pandas as pd
 import sys
 import os
 
-# Додаємо кореневу папку проекту до PYTHONPATH
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-# Імпорт компонентів
 from app.core.model_manager import ModelManager
 from app.core.predictor import ChurnPredictor
 from app.core.visualizer import ResultVisualizer
@@ -26,38 +25,41 @@ st.set_page_config(
 st.title("Прогнозування відтоку клієнтів телекомунікаційної компанії")
 st.markdown("""
 Цей застосунок використовує машинне навчання для прогнозування ймовірності відтоку клієнтів.
-Модель навчена на даних телекомунікаційної компанії та дозволяє оцінити ризик втрати клієнта.
+Виберіть модель у бічній панелі та введіть дані клієнта для отримання прогнозу.
 """)
 
-# Ініціалізація менеджера моделі
+# Ініціалізація менеджера моделей
 model_manager = ModelManager()
-model, preprocessor = model_manager.get_model()
+models, preprocessor, model_results = model_manager.load_all_models()
 
-if not model_manager.is_loaded():
-    st.error("Не вдалося завантажити модель або препроцесор.")
+if not models:
+    st.error("Не вдалося завантажити жодну модель. Переконайтеся, що моделі існують у папці 'models'.")
     st.stop()
 
-# Ініціалізація компонентів
-predictor = ChurnPredictor(model, preprocessor)
+# Отримання доступних моделей
+available_models = list(models.keys())
+
+# Відображення бічної панелі та вибір моделі
+selected_model = Sidebar.render(available_models, model_results)
+
+if selected_model is None:
+    selected_model = available_models[0] if available_models else None
+
+if selected_model is None:
+    st.error("Немає доступних моделей для прогнозування.")
+    st.stop()
+
+# Завантаження обраної моделі
+model = models[selected_model]
+
+# Ініціалізація компонентів з ПЕРЕДАЧЕЮ НАЗВИ МОДЕЛІ
+predictor = ChurnPredictor(model, preprocessor, model_name=selected_model)  # <-- Ось виправлення!
 visualizer = ResultVisualizer()
 
-# Бічна панель
-mode = Sidebar.render(
-    model_info="""
-    **Найкраща модель:** LightGBM
-    
-    **Метрики:**
-    - Точність: 94.3%
-    - Precision: 95.5%
-    - Recall: 94.0%
-    - F1-Score: 94.8%
-    - ROC-AUC: 98.3%
-    
-    **Топ-3 важливі ознаки:**
-    1. Середній рахунок
-    2. Вік підписки
-    3. Залишок контракту
-    """
+# Визначення режиму роботи
+mode = st.sidebar.radio(
+    "Виберіть режим роботи:",
+    ["Один клієнт", "Пакетна обробка (CSV файл)"]
 )
 
 # Основний контент
@@ -68,6 +70,8 @@ else:
 
 # Футер
 st.divider()
-st.markdown("""
-**Технології:** Python, Streamlit, Scikit-learn, LightGBM, Pandas
+st.markdown(f"""
+**Технології:** Python, Streamlit, Scikit-learn, LightGBM, XGBoost, Pandas
+
+**Обрана модель:** {selected_model}
 """)

@@ -25,13 +25,13 @@ dmypy.json
 
 # Data
 #data/raw/
-data/processed/
+#data/processed/
 # *.csv
 *.xlsx
 *.db
 
 # Models
-# *.pkl
+#*.pkl
 *.joblib
 *.h5
 *.keras

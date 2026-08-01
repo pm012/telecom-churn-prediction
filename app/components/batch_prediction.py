@@ -7,8 +7,8 @@ class BatchPredictionComponent:
     
     REQUIRED_COLUMNS = [
         'is_tv_subscriber', 'is_movie_package_subscriber', 'subscription_age',
-        'bill_avg', 'reamining_contract', 'service_failure_count',
-        'download_avg', 'upload_avg', 'download_over_limit'
+        'bill_avg', 'reamining_contract',  # Саме так, як в навчальних даних
+        'service_failure_count', 'download_avg', 'upload_avg', 'download_over_limit'
     ]
     
     def __init__(self, predictor):
@@ -17,7 +17,14 @@ class BatchPredictionComponent:
     def render(self):
         """Відображення форми пакетної обробки"""
         st.header("Пакетна обробка даних")
-        st.markdown("Завантажте CSV файл з даними клієнтів для масового прогнозування.")
+        st.markdown("""
+        Завантажте CSV файл з даними клієнтів для масового прогнозування.
+        
+        **Важливо:** Файл повинен містити колонки:
+        - `is_tv_subscriber`, `is_movie_package_subscriber`, `subscription_age`
+        - `bill_avg`, `reamining_contract`
+        - `service_failure_count`, `download_avg`, `upload_avg`, `download_over_limit`
+        """)
         
         uploaded_file = st.file_uploader(
             "Виберіть CSV файл",
@@ -74,10 +81,12 @@ class BatchPredictionComponent:
             high_risk = len(results[results['risk_level'] == 'Високий'])
             st.metric("Високий ризик", f"{high_risk} клієнтів")
         
+        if 'model_used' in results.columns:
+            st.info(f"**Використана модель:** {results['model_used'].iloc[0]}")
+        
         st.subheader("Детальні результати")
         st.dataframe(results)
         
-        # Завантаження результатів
         csv = results.to_csv(index=False)
         st.download_button(
             label="Завантажити результати (CSV)",

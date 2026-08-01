@@ -21,9 +21,10 @@ class ModelTrainer:
         self.best_model_name = None
         self.best_params = None
         self.results = {}
+        self.trained_models = {}
         
     def create_models(self):
-        """Створення словника з різними моделями (без SVM)"""
+        """Створення словника з різними моделями"""
         models = {
             'Logistic Regression': LogisticRegression(random_state=42, max_iter=1000),
             'Random Forest': RandomForestClassifier(random_state=42, n_jobs=-1),
@@ -89,15 +90,15 @@ class ModelTrainer:
             param_grid = self.get_param_grid(model_name)
         
         if param_grid:
-            print(f"Пошук гіперпараметрів для {model_name}...")
+            print(f"  Пошук гіперпараметрів для {model_name}...")
             grid_search = GridSearchCV(
-                model, param_grid, cv=5, scoring='roc_auc', 
+                model, param_grid, cv=3, scoring='roc_auc', 
                 n_jobs=-1, verbose=0
             )
             grid_search.fit(X_train, y_train)
             best_model = grid_search.best_estimator_
             best_params = grid_search.best_params_
-            print(f"Найкращі параметри: {best_params}")
+            print(f"  Найкращі параметри: {best_params}")
         else:
             model.fit(X_train, y_train)
             best_model = model
@@ -123,7 +124,7 @@ class ModelTrainer:
         return metrics
     
     def train_all_models(self, X_train, y_train, X_test, y_test, tune_hyperparams=True):
-        """Навчання та оцінка всіх моделей (без SVM)"""
+        """Навчання та оцінка всіх моделей"""
         self.create_models()
         
         for model_name in self.models.keys():
@@ -131,34 +132,33 @@ class ModelTrainer:
             print(f"Навчання моделі: {model_name}")
             
             try:
-                # Навчання
                 best_model, best_params = self.train_model(
                     X_train, y_train, model_name, 
                     param_grid=self.get_param_grid(model_name) if tune_hyperparams else None
                 )
                 
-                # Оцінка
                 metrics = self.evaluate_model(best_model, X_test, y_test)
                 
-                # Збереження результатів
                 self.results[model_name] = {
                     'model': best_model,
                     'params': best_params,
                     'metrics': metrics
                 }
                 
-                print(f"Метрики для {model_name}:")
-                for metric, value in metrics.items():
-                    print(f"  {metric}: {value:.4f}")
+                # Зберігаємо кожну модель
+                self.trained_models[model_name] = best_model
                 
-                # Оновлення найкращої моделі
+                print(f"  Метрики для {model_name}:")
+                for metric, value in metrics.items():
+                    print(f"    {metric}: {value:.4f}")
+                
                 if self.best_model is None or metrics['roc_auc'] > self.results[self.best_model_name]['metrics']['roc_auc']:
                     self.best_model = best_model
                     self.best_model_name = model_name
                     self.best_params = best_params
                     
             except Exception as e:
-                print(f"Помилка при навчанні {model_name}: {e}")
+                print(f"  Помилка при навчанні {model_name}: {e}")
         
         print(f"\n{'='*50}")
         print(f"Найкраща модель: {self.best_model_name}")
@@ -166,17 +166,26 @@ class ModelTrainer:
         
         return self.best_model
     
-    def save_model(self, model, path='models/best_model.pkl'):
-        """Збереження моделі"""
-        os.makedirs(os.path.dirname(path), exist_ok=True)
-        joblib.dump(model, path)
-        print(f"Модель збережено в {path}")
-    
-    def load_model(self, path='models/best_model.pkl'):
-        """Завантаження моделі"""
-        model = joblib.load(path)
-        print(f"Модель завантажено з {path}")
-        return model
+    def save_all_models(self, base_path='models'):
+        """Збереження ВСІХ навчених моделей"""
+        os.makedirs(base_path, exist_ok=True)
+        
+        # Збереження кожної моделі
+        for model_name, model in self.trained_models.items():
+            safe_name = model_name.lower().replace(' ', '_')
+            file_path = f'{base_path}/{safe_name}_model.pkl'
+            joblib.dump(model, file_path)
+            print(f"Збережено модель: {model_name} -> {file_path}")
+        
+        # Збереження найкращої моделі
+        if self.best_model:
+            joblib.dump(self.best_model, f'{base_path}/best_model.pkl')
+            print(f"Збережено найкращу модель: {base_path}/best_model.pkl")
+        
+        # Збереження метрик
+        results_df = self.get_results_df()
+        results_df.to_csv(f'{base_path}/model_results.csv', index=False)
+        print(f"Збережено метрики: {base_path}/model_results.csv")
     
     def get_results_df(self):
         """Отримання DataFrame з результатами всіх моделей"""
@@ -190,37 +199,38 @@ class ModelTrainer:
         return pd.DataFrame(results_data).sort_values('roc_auc', ascending=False)
 
 if __name__ == "__main__":
-    print("ЗАПУСК НАВЧАННЯ МОДЕЛЕЙ")
-    print("="*50)
+    print("="*60)
+    print("ЗАПУСК НАВЧАННЯ ВСІХ МОДЕЛЕЙ")
+    print("="*60)
     
-    # Завантаження даних
+    # Завантаження препроцесора
     from data_preprocessing import DataPreprocessor
     preprocessor = DataPreprocessor()
-    preprocessor.load_preprocessor('models/preprocessor.pkl')
+    
+    # Перевіряємо, чи існує препроцесор
+    if os.path.exists('models/preprocessor.pkl'):
+        preprocessor.load_preprocessor('models/preprocessor.pkl')
+    else:
+        print("Препроцесор не знайдено. Створюємо новий...")
+        df_temp = pd.read_csv('data/raw/internet_service_churn.csv', na_values=['', ' '])
+        features, target = preprocessor.prepare_features(df_temp, is_training=True)
+        preprocessor.save_preprocessor()
     
     # Завантаження даних
+    print("\nЗавантаження даних...")
     df = pd.read_csv('data/raw/internet_service_churn.csv', na_values=['', ' '])
-    
-    # Підготовка даних
     features, target = preprocessor.prepare_features(df, is_training=True)
-    
-    # Розділення даних
     X_train, X_test, y_train, y_test = preprocessor.split_data(features, target)
     
-    # Навчання моделей (без SVM)
+    # Навчання моделей
+    print("\nПочаток навчання моделей...")
     trainer = ModelTrainer()
     best_model = trainer.train_all_models(X_train, y_train, X_test, y_test, tune_hyperparams=True)
     
-    # Збереження найкращої моделі
-    trainer.save_model(best_model, 'models/best_model.pkl')
+    # Збереження всіх моделей
+    print("\nЗбереження всіх моделей...")
+    trainer.save_all_models('models')
     
-    # Виведення результатів
-    print("\n" + "="*50)
-    print("РЕЗУЛЬТАТИ ВСІХ МОДЕЛЕЙ")
-    print("="*50)
-    results_df = trainer.get_results_df()
-    print(results_df.to_string(index=False))
-    
-    # Збереження результатів
-    results_df.to_csv('models/model_results.csv', index=False)
-    print("\nРезультати збережено в models/model_results.csv")
+    print("\n" + "="*60)
+    print(" ВСІ МОДЕЛІ УСПІШНО НАВЧЕНО ТА ЗБЕРЕЖЕНО!")
+    print("="*60)
