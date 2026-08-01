@@ -1,12 +1,9 @@
 # src/data_preprocessing.py
 import pandas as pd
-import numpy as np
 from sklearn.preprocessing import StandardScaler, LabelEncoder
 from sklearn.model_selection import train_test_split
 import joblib
 import os
-import warnings
-warnings.filterwarnings('ignore')
 
 class DataPreprocessor:
     def __init__(self):
@@ -41,7 +38,7 @@ class DataPreprocessor:
             print("Створено індикатор пропусків для 'reamining_contract'")
             
             median_val = df_clean['reamining_contract'].median()
-            df_clean['reamining_contract'].fillna(median_val, inplace=True)
+            df_clean['reamining_contract'] = df_clean['reamining_contract'].fillna(median_val)
             print(f"Заповнено пропуски в 'reamining_contract' медіаною: {median_val:.2f}")
             
             if 'reamining_contract_missing' not in self.numeric_columns:
@@ -50,13 +47,13 @@ class DataPreprocessor:
         for col in self.base_numeric_columns:
             if col in df_clean.columns and df_clean[col].isnull().any():
                 median_val = df_clean[col].median()
-                df_clean[col].fillna(median_val, inplace=True)
+                df_clean[col] = df_clean[col].fillna(median_val)
                 print(f"Заповнено пропуски в '{col}' медіаною: {median_val:.2f}")
         
         for col in self.categorical_columns:
             if col in df_clean.columns and df_clean[col].isnull().any():
                 mode_val = df_clean[col].mode()[0]
-                df_clean[col].fillna(mode_val, inplace=True)
+                df_clean[col] = df_clean[col].fillna(mode_val)
                 print(f"Заповнено пропуски в '{col}' модою: {mode_val}")
         
         if df_clean.isnull().any().any():

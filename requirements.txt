@@ -101,3 +101,4 @@ websockets==16.0
 wheel==0.47.0
 wrapt==2.2.2
 xgboost==3.3.0
+pytest==8.3.5
