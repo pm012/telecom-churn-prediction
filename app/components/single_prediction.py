@@ -65,7 +65,7 @@ class SinglePredictionComponent:
                 'is_movie_package_subscriber': is_movie,
                 'subscription_age': subscription_age,
                 'bill_avg': bill_avg,
-                'reamining_contract': remaining_contract,
+                'remaining_contract': remaining_contract,
                 'service_failure_count': service_failures,
                 'download_avg': download_avg,
                 'upload_avg': upload_avg,

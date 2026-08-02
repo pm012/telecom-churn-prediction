@@ -7,7 +7,7 @@ class BatchPredictionComponent:
     
     REQUIRED_COLUMNS = [
         'is_tv_subscriber', 'is_movie_package_subscriber', 'subscription_age',
-        'bill_avg', 'reamining_contract',  # Саме так, як в навчальних даних
+        'bill_avg', 'remaining_contract',  # Саме так, як в навчальних даних
         'service_failure_count', 'download_avg', 'upload_avg', 'download_over_limit'
     ]
     
@@ -22,7 +22,7 @@ class BatchPredictionComponent:
         
         **Важливо:** Файл повинен містити колонки:
         - `is_tv_subscriber`, `is_movie_package_subscriber`, `subscription_age`
-        - `bill_avg`, `reamining_contract`
+        - `bill_avg`, `remaining_contract`
         - `service_failure_count`, `download_avg`, `upload_avg`, `download_over_limit`
         """)
         

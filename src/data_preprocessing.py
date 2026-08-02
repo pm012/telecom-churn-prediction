@@ -11,7 +11,7 @@ class DataPreprocessor:
         self.label_encoders = {}
         self.feature_columns = None
         self.categorical_columns = ['is_tv_subscriber', 'is_movie_package_subscriber', 'download_over_limit']
-        self.base_numeric_columns = ['subscription_age', 'bill_avg', 'reamining_contract', 
+        self.base_numeric_columns = ['subscription_age', 'bill_avg', 'remaining_contract', 
                                     'service_failure_count', 'download_avg', 'upload_avg']
         self.numeric_columns = self.base_numeric_columns.copy()
         
@@ -32,17 +32,17 @@ class DataPreprocessor:
         missing_before = df_clean.isnull().sum()
         print(missing_before[missing_before > 0])
         
-        # Обробка reamining_contract
-        if 'reamining_contract' in df_clean.columns:
-            df_clean['reamining_contract_missing'] = df_clean['reamining_contract'].isnull().astype(int)
-            print("Створено індикатор пропусків для 'reamining_contract'")
+        # Обробка remaining_contract
+        if 'remaining_contract' in df_clean.columns:
+            df_clean['remaining_contract_missing'] = df_clean['remaining_contract'].isnull().astype(int)
+            print("Створено індикатор пропусків для 'remaining_contract'")
             
-            median_val = df_clean['reamining_contract'].median()
-            df_clean['reamining_contract'] = df_clean['reamining_contract'].fillna(median_val)
-            print(f"Заповнено пропуски в 'reamining_contract' медіаною: {median_val:.2f}")
+            median_val = df_clean['remaining_contract'].median()
+            df_clean['remaining_contract'] = df_clean['remaining_contract'].fillna(median_val)
+            print(f"Заповнено пропуски в 'remaining_contract' медіаною: {median_val:.2f}")
             
-            if 'reamining_contract_missing' not in self.numeric_columns:
-                self.numeric_columns.append('reamining_contract_missing')
+            if 'remaining_contract_missing' not in self.numeric_columns:
+                self.numeric_columns.append('remaining_contract_missing')
         
         for col in self.base_numeric_columns:
             if col in df_clean.columns and df_clean[col].isnull().any():
@@ -83,10 +83,14 @@ class DataPreprocessor:
         return df_encoded
     
     def scale_features(self, df, fit=True):
-        """Нормалізація числових ознак"""
+        """Масштабування числових ознак за допомогою вже навченого scaler"""
         df_scaled = df.copy()
         
         available_numeric = [col for col in self.numeric_columns if col in df_scaled.columns]
+        if not available_numeric:
+            print("Немає числових колонок для масштабування")
+            return df_scaled
+        
         print(f"Колонки для нормалізації: {available_numeric}")
         
         if fit:
@@ -94,6 +98,8 @@ class DataPreprocessor:
             self.scaler.fit(df_scaled[available_numeric])
             scaled_data = self.scaler.transform(df_scaled[available_numeric])
         else:
+            if not hasattr(self.scaler, 'mean_'):
+                raise ValueError("Scaler не навченний. Спочатку навчіть його на тренувальній вибірці.")
             scaled_data = self.scaler.transform(df_scaled[available_numeric])
         
         for i, col in enumerate(available_numeric):
@@ -121,24 +127,32 @@ class DataPreprocessor:
         
         df_encoded = self.encode_categorical(df_clean)
         
-        self.feature_columns = df_encoded.columns.tolist()
+        if self.feature_columns is None:
+            self.feature_columns = df_encoded.columns.tolist()
+        else:
+            for col in self.feature_columns:
+                if col not in df_encoded.columns:
+                    df_encoded[col] = 0
+            df_encoded = df_encoded[self.feature_columns]
+        
         print(f"\nОзнаки для моделі ({len(self.feature_columns)}): {self.feature_columns}")
         
-        df_scaled = self.scale_features(df_encoded, fit=is_training)
-        
-        # ЗБЕРІГАЄМО ОБРОБЛЕНІ ДАНІ
         if is_training:
-            self.save_processed_data(df_scaled, target)
-        
-        if is_training and target is not None:
+            self.feature_columns = df_encoded.columns.tolist()
+            if target is not None:
+                self.save_processed_data(df_encoded, target)
+                print("\nПідготовку даних завершено")
+                print(f"\nРозподіл цільової змінної:")
+                print(f"  Відтік (1): {target.sum()} ({target.sum()/len(target)*100:.1f}%)")
+                print(f"  Залишились (0): {len(target)-target.sum()} ({(len(target)-target.sum())/len(target)*100:.1f}%)")
+                return df_encoded, target
+        else:
+            df_scaled = self.scale_features(df_encoded, fit=False)
             print("\nПідготовку даних завершено")
-            print(f"\nРозподіл цільової змінної:")
-            print(f"  Відтік (1): {target.sum()} ({target.sum()/len(target)*100:.1f}%)")
-            print(f"  Залишились (0): {len(target)-target.sum()} ({(len(target)-target.sum())/len(target)*100:.1f}%)")
-            return df_scaled, target
+            return df_scaled
         
         print("\nПідготовку даних завершено")
-        return df_scaled
+        return df_encoded
     
     def save_processed_data(self, features, target):
         """Збереження оброблених даних в data/processed/"""
@@ -154,7 +168,7 @@ class DataPreprocessor:
         print(f"   Розмір: {processed_df.shape}")
     
     def split_data(self, features, target, test_size=0.2, random_state=42):
-        """Розділення даних на тренувальні та тестові"""
+        """Розділення даних на тренувальні та тестові й масштабування після спліту"""
         X_train, X_test, y_train, y_test = train_test_split(
             features, target, test_size=test_size, random_state=random_state, 
             stratify=target
@@ -165,8 +179,11 @@ class DataPreprocessor:
         print(f"\nРозподіл цільової змінної:")
         print(f"  Тренування - Відтік: {y_train.sum()} ({y_train.sum()/len(y_train)*100:.1f}%)")
         print(f"  Тест - Відтік: {y_test.sum()} ({y_test.sum()/len(y_test)*100:.1f}%)")
+
+        X_train_scaled = self.scale_features(X_train, fit=True)
+        X_test_scaled = self.scale_features(X_test, fit=False)
         
-        return X_train, X_test, y_train, y_test
+        return X_train_scaled, X_test_scaled, y_train, y_test
     
     def save_preprocessor(self, path='models/preprocessor.pkl'):
         """Збереження препроцесора"""
@@ -180,7 +197,7 @@ class DataPreprocessor:
             'base_numeric_columns': self.base_numeric_columns
         }
         joblib.dump(preprocessor_data, path)
-        print(f"\n💾 Препроцесор збережено в {path}")
+        print(f"\nПрепроцесор збережено в {path}")
     
     def load_preprocessor(self, path='models/preprocessor.pkl'):
         """Завантаження препроцесора"""

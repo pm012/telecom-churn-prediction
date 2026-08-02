@@ -7,6 +7,11 @@ from sklearn.metrics import confusion_matrix, roc_curve, auc, classification_rep
 import joblib
 import os
 import warnings
+
+try:
+    from .data_preprocessing import DataPreprocessor
+except ImportError:
+    from data_preprocessing import DataPreprocessor
 warnings.filterwarnings('ignore')
 
 class ModelEvaluator:
@@ -124,34 +129,30 @@ class ModelEvaluator:
 
 if __name__ == "__main__":
     print("ЗАПУСК ОЦІНКИ МОДЕЛІ")
-    print("="*50)
+    print("="*50)    
     
-    # Завантаження препроцесора
-    from data_preprocessing import DataPreprocessor
     preprocessor = DataPreprocessor()
     preprocessor.load_preprocessor('models/preprocessor.pkl')
     
-    # Завантаження моделі
     model = joblib.load('models/best_model.pkl')
     print("Модель завантажено")
     
-    # Завантаження даних
     df = pd.read_csv('data/raw/internet_service_churn.csv', na_values=['', ' '])
     
-    # Підготовка даних
+    # Підготовка даних (БЕЗ масштабування)
     features, target = preprocessor.prepare_features(df, is_training=True)
     
-    # Розділення даних
+    # Розділення та масштабування
     X_train, X_test, y_train, y_test = preprocessor.split_data(features, target)
     
-    # Оцінка моделі
+    # Оцінка
     evaluator = ModelEvaluator(model, preprocessor.feature_columns)
     metrics, class_report, y_pred, y_pred_proba = evaluator.evaluate(X_test, y_test)
     
     print("\nМетрики моделі:")
     for metric, value in metrics.items():
         print(f"  {metric}: {value:.4f}")
-    
+
     print("\nClassification Report:")
     print(class_report)
     

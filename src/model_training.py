@@ -204,7 +204,10 @@ if __name__ == "__main__":
     print("="*60)
     
     # Завантаження препроцесора
-    from data_preprocessing import DataPreprocessor
+    try:
+        from .data_preprocessing import DataPreprocessor
+    except ImportError:
+        from data_preprocessing import DataPreprocessor
     preprocessor = DataPreprocessor()
     
     # Перевіряємо, чи існує препроцесор

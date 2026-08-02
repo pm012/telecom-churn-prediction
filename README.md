@@ -68,7 +68,7 @@ telecom-churn-prediction/
 Основні характеристики датасету:
 
 - частка клієнтів, які відмовилися від послуг: приблизно 55.4%;
-- є пропуски в полях `reamining_contract`, `download_avg` та `upload_avg`;
+- є пропуски в полях `remaining_contract`, `download_avg` та `upload_avg`;
 - серед ознак присутні як бінарні ознаки підписок, так і числові показники використання послуг і фінансової активності.
 
 ## EDA та обґрунтування підходу
@@ -110,13 +110,12 @@ telecom-churn-prediction/
 - Decision Tree;
 - KNN.
 
-Найкращий результат показала модель XGBoost. Основні метрики на тестовому наборі:
+Найкращі результати показали LightGBM і XGBoost. За основними метриками LightGBM трохи випередив XGBoost за Accuracy, Recall і F1-score, тоді як XGBoost мав найвищий ROC-AUC.
 
-- Accuracy: 0.9413
-- Precision: 0.9550
-- Recall: 0.9383
-- F1-score: 0.9466
-- ROC-AUC: 0.9822
+Основні метрики на тестовому наборі:
+
+- LightGBM: Accuracy 0.9436, Precision 0.9564, Recall 0.9412, F1-score 0.9487, ROC-AUC 0.9826
+- XGBoost: Accuracy 0.9429, Precision 0.9565, Recall 0.9396, F1-score 0.9480, ROC-AUC 0.9829
 
 ## Запуск проєкту
 
@@ -128,13 +127,25 @@ telecom-churn-prediction/
 pip install -r requirements.txt
 ```
 
-2. Навчіть модель:
+2. Запустити створення препроцесора
+
+```bash
+python src/data_preprocessing.py
+```
+
+3. Навчіть модель:
 
 ```bash
 python src/model_training.py
 ```
 
-3. Запустіть веб-застосунок:
+4. Оновіть оцінку:
+
+```bash
+python src/model_training.py
+```
+
+5. Запустіть веб-застосунок:
 
 ```bash
 streamlit run app/main.py
@@ -183,7 +194,7 @@ python -m pytest -q tests --disable-warnings
   "is_movie_package_subscriber": 0,
   "subscription_age": 12,
   "bill_avg": 45,
-  "reamining_contract": 6,
+  "remaining_contract": 6,
   "service_failure_count": 0,
   "download_avg": 20,
   "upload_avg": 5,
@@ -219,7 +230,7 @@ The dataset contains 72,274 rows and 11 columns. The target variable is `churn`.
 Key characteristics:
 
 - churn rate is about 55.4%;
-- missing values are present in `reamining_contract`, `download_avg`, and `upload_avg`;
+- missing values are present in `remaining_contract`, `download_avg`, and `upload_avg`;
 - the dataset includes both binary subscription indicators and numeric usage and billing features.
 
 ## EDA and modeling rationale
@@ -242,13 +253,12 @@ These checks justified the preprocessing strategy:
 
 Several algorithms were tested, including Logistic Regression, Random Forest, Gradient Boosting, XGBoost, LightGBM, Decision Tree, and KNN.
 
-The best-performing model is XGBoost with the following test metrics:
+The best-performing models were LightGBM and XGBoost. LightGBM had slightly better Accuracy, Recall, and F1-score, while XGBoost achieved the highest ROC-AUC.
 
-- Accuracy: 0.9413
-- Precision: 0.9550
-- Recall: 0.9383
-- F1-score: 0.9466
-- ROC-AUC: 0.9822
+Test metrics:
+
+- LightGBM: Accuracy 0.9436, Precision 0.9564, Recall 0.9412, F1-score 0.9487, ROC-AUC 0.9826
+- XGBoost: Accuracy 0.9429, Precision 0.9565, Recall 0.9396, F1-score 0.9480, ROC-AUC 0.9829
 
 ## Run locally
 
