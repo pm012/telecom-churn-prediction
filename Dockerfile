@@ -21,10 +21,10 @@ RUN pip install --no-cache-dir -r requirements.txt
 COPY . .
 
 # Створення папки для моделей
-RUN mkdir -p models
+#RUN mkdir -p models
 
 # Відкриття порту для Streamlit
 EXPOSE 8501
 
 # Команда для запуску
-CMD ["streamlit", "run", "app/main.py", "--server.port=8501", "--server.address=0.0.0.0"]
+CMD ["streamlit", "run", "app/main.py"]
