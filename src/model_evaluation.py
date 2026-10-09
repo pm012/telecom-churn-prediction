@@ -1,5 +1,4 @@
 # src/model_evaluation.py
-import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 import seaborn as sns
@@ -20,7 +19,7 @@ class ModelEvaluator:
         self.feature_names = feature_names
         
     def evaluate(self, X_test, y_test, threshold=0.5):
-        """Комплексна оцінка моделі"""
+        """Complex model evaluation"""
         y_pred = self.model.predict(X_test)
         y_pred_proba = self.model.predict_proba(X_test)[:, 1] if hasattr(self.model, 'predict_proba') else None
         
@@ -41,7 +40,7 @@ class ModelEvaluator:
         return metrics, class_report, y_pred, y_pred_proba
     
     def plot_confusion_matrix(self, y_test, y_pred):
-        """Візуалізація матриці плутанини"""
+        """Visualization of the confusion matrix"""
         cm = confusion_matrix(y_test, y_pred)
         
         fig, ax = plt.subplots(figsize=(8, 6))
@@ -56,7 +55,7 @@ class ModelEvaluator:
         return fig
     
     def plot_roc_curve(self, y_test, y_pred_proba):
-        """Візуалізація ROC-кривої"""
+        """Visualization of the ROC curve"""
         fpr, tpr, _ = roc_curve(y_test, y_pred_proba)
         roc_auc = auc(fpr, tpr)
         
@@ -75,7 +74,7 @@ class ModelEvaluator:
         return fig
     
     def plot_feature_importance(self, top_n=10):
-        """Візуалізація важливості ознак"""
+        """Visualization of feature importance"""
         if hasattr(self.model, 'feature_importances_'):
             importances = self.model.feature_importances_
             feature_imp = pd.DataFrame({
@@ -94,7 +93,7 @@ class ModelEvaluator:
         return None, None
     
     def analyze_predictions(self, X_test, y_test, y_pred, y_pred_proba):
-        """Детальний аналіз передбачень"""
+        """Detailed analysis of predictions"""
         results_df = pd.DataFrame({
             'True_Label': y_test,
             'Predicted_Label': y_pred,
@@ -128,77 +127,77 @@ class ModelEvaluator:
         return results_df, error_analysis, None
 
 if __name__ == "__main__":
-    print("ЗАПУСК ОЦІНКИ МОДЕЛІ")
+    print("Launching Model Evaluation")
     print("="*50)    
     
     preprocessor = DataPreprocessor()
     preprocessor.load_preprocessor('models/preprocessor.pkl')
     
     model = joblib.load('models/best_model.pkl')
-    print("Модель завантажено")
+    print("Model loaded")
     
     df = pd.read_csv('data/raw/internet_service_churn.csv', na_values=['', ' '])
     
-    # Підготовка даних (БЕЗ масштабування)
+    # Data preparation (WITHOUT scaling)
     features, target = preprocessor.prepare_features(df, is_training=True)
     
-    # Розділення та масштабування
+    # Splitting and scaling
     X_train, X_test, y_train, y_test = preprocessor.split_data(features, target)
     
-    # Оцінка
+    # Evaluation
     evaluator = ModelEvaluator(model, preprocessor.feature_columns)
     metrics, class_report, y_pred, y_pred_proba = evaluator.evaluate(X_test, y_test)
     
-    print("\nМетрики моделі:")
+    print("\nModel Metrics:")
     for metric, value in metrics.items():
         print(f"  {metric}: {value:.4f}")
 
     print("\nClassification Report:")
     print(class_report)
     
-    # Створення папки для збереження візуалізацій
+    # Create folder for saving visualizations
     os.makedirs('models/plots', exist_ok=True)
     
-    # Візуалізація
-    print("\nСтворення візуалізацій...")
+    # Visualization
+    print("\nCreating visualizations...")
     
-    # Матриця плутанини
+    # Confusion Matrix
     fig1 = evaluator.plot_confusion_matrix(y_test, y_pred)
     fig1.savefig('models/plots/confusion_matrix.png', dpi=300, bbox_inches='tight')
     plt.close(fig1)
-    print("Матрицю плутанини збережено в models/plots/confusion_matrix.png")
+    print("Confusion matrix saved to models/plots/confusion_matrix.png")
     
-    # ROC-крива
+    # ROC Curve
     fig2 = evaluator.plot_roc_curve(y_test, y_pred_proba)
     fig2.savefig('models/plots/roc_curve.png', dpi=300, bbox_inches='tight')
     plt.close(fig2)
-    print("ROC-криву збережено в models/plots/roc_curve.png")
+    print("ROC curve saved to models/plots/roc_curve.png")
     
-    # Важливість ознак
+    # Feature Importance
     fig3, feature_imp = evaluator.plot_feature_importance(top_n=10)
     if fig3 is not None:
         fig3.savefig('models/plots/feature_importance.png', dpi=300, bbox_inches='tight')
         plt.close(fig3)
-        print("Важливість ознак збережено в models/plots/feature_importance.png")
-        print("\nТоп-10 найважливіших ознак:")
+        print("Feature importance saved to models/plots/feature_importance.png")
+        print("\nTop-10 most important features:")
         print(feature_imp.head(10).to_string(index=False))
     
-    # Детальний аналіз
+    # Detailed analysis
     results_df, error_analysis, risk_stats = evaluator.analyze_predictions(
         X_test, y_test, y_pred, y_pred_proba
     )
     
-    print("\nСтатистика помилок:")
+    print("\nError Statistics:")
     for key, value in error_analysis.items():
         print(f"  {key}: {value}")
     
     if risk_stats is not None:
-        print("\nРозподіл за рівнями ризику:")
+        print("\nRisk Level Distribution:")
         print(risk_stats)
     
-    # Збереження результатів
+    # Saving results
     results_df.to_csv('models/plots/predictions_analysis.csv', index=False)
-    print("\nРезультати аналізу збережено в models/plots/predictions_analysis.csv")
+    print("\nResults of the analysis saved to models/plots/predictions_analysis.csv")
     
     print("\n" + "="*50)
-    print("ОЦІНКУ МОДЕЛІ ЗАВЕРШЕНО")
+    print("Model Evaluation Completed")

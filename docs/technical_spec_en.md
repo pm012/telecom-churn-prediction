@@ -2,7 +2,7 @@
 
 ## 1. Introduction
 
-Congratulations on getting your first IT job as a Data Scientist. Your manager has decided to give you a small project so that you can become familiar with the customer database, the types of services provided by the company, and the company's technical capabilities.
+Objective:  your manager has decided to give you a small project so that you can become familiar with the customer database, the types of services provided by the company, and the company's technical capabilities.
 
 This document describes the technical specification of the project, whose goal is to develop a predictive model for identifying the probability that customers will stop using the company's telecommunications services based on historical customer data. The project involves data analysis, data preprocessing, machine learning, model evaluation, and packaging the model into a container to ensure reproducibility.
 

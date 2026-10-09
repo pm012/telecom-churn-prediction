@@ -32,7 +32,7 @@ class DataPreprocessor:
         missing_before = df_clean.isnull().sum()
         print(missing_before[missing_before > 0])
         
-        # Обробка remaining_contract
+        # Processing remaining_contract
         if 'remaining_contract' in df_clean.columns:
             df_clean['remaining_contract_missing'] = df_clean['remaining_contract'].isnull().astype(int)
             print("Created missing value indicator for 'remaining_contract'")
