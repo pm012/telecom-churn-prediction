@@ -3,11 +3,11 @@ import pandas as pd
 import numpy as np
 
 def create_test_csv():
-    """Створення тестового CSV файлу для пакетної обробки"""
+    """Creating a test CSV file for batch processing"""
     
-    # Створення різних сценаріїв клієнтів
+    # Creating different client scenarios
     test_data = [
-        # Низький ризик
+        # Low risk
         {
             'id': 1,
             'is_tv_subscriber': 1,
@@ -32,7 +32,7 @@ def create_test_csv():
             'upload_avg': 8.0,
             'download_over_limit': 0
         },
-        # Середній ризик
+        # Medium risk
         {
             'id': 3,
             'is_tv_subscriber': 1,
@@ -57,7 +57,7 @@ def create_test_csv():
             'upload_avg': 2.0,
             'download_over_limit': 1
         },
-        # Високий ризик
+        # High risk
         {
             'id': 5,
             'is_tv_subscriber': 0,
@@ -82,7 +82,7 @@ def create_test_csv():
             'upload_avg': 0.1,
             'download_over_limit': 1
         },
-        # Екстремальний ризик
+        # Extreme risk
         {
             'id': 7,
             'is_tv_subscriber': 0,
@@ -97,14 +97,14 @@ def create_test_csv():
         }
     ]
     
-    # Створення DataFrame
+    # Creating DataFrame
     df = pd.DataFrame(test_data)
     
-    # Збереження в CSV
+    # Saving to CSV
     df.to_csv('test_batch_data.csv', index=False)
-    print("Тестовий CSV файл створено: test_batch_data.csv")
-    print(f"Кількість клієнтів: {len(df)}")
-    print("\nВміст файлу:")
+    print("Test CSV file created: test_batch_data.csv")
+    print(f"Number of clients: {len(df)}")
+    print("\nFile content:")
     print(df.to_string())
     
     return df

@@ -8,17 +8,17 @@ sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 from src.data_preprocessing import DataPreprocessor
 
 def test_predictions():
-    """Тестування різних сценаріїв клієнтів"""
+    """Testing Different Customer Scenarios"""
     
-    # Завантаження моделі та препроцесора
+    # Loading the model and preprocessor
     model = joblib.load('models/best_model.pkl')
     preprocessor = DataPreprocessor()
     preprocessor.load_preprocessor('models/preprocessor.pkl')
     
-    # Тестові сценарії
+    # Test cases
     test_cases = [
         {
-            'name': 'Низький ризик (лояльний клієнт)',
+            'name': 'Low Risk (Loyal Customer)',
             'data': {
                 'is_tv_subscriber': 1,
                 'is_movie_package_subscriber': 1,
@@ -32,7 +32,7 @@ def test_predictions():
             }
         },
         {
-            'name': 'Середній ризик',
+            'name': 'Medium Risk',
             'data': {
                 'is_tv_subscriber': 1,
                 'is_movie_package_subscriber': 0,
@@ -46,7 +46,7 @@ def test_predictions():
             }
         },
         {
-            'name': 'Високий ризик (проблемний клієнт)',
+            'name': 'High Risk (Problematic Customer)',
             'data': {
                 'is_tv_subscriber': 0,
                 'is_movie_package_subscriber': 0,
@@ -60,7 +60,7 @@ def test_predictions():
             }
         },
         {
-            'name': 'Екстремальний ризик',
+            'name': 'Extreme Risk',
             'data': {
                 'is_tv_subscriber': 0,
                 'is_movie_package_subscriber': 0,
@@ -76,37 +76,37 @@ def test_predictions():
     ]
     
     print("="*60)
-    print("ТЕСТУВАННЯ РІЗНИХ СЦЕНАРІЇВ КЛІЄНТІВ")
+    print("TESTING DIFFERENT CUSTOMER SCENARIOS")
     print("="*60)
     
     for case in test_cases:
-        print(f"\nСценарій: {case['name']}")
+        print(f"\nScenario: {case['name']}")
         print("-" * 40)
         
-        # Створення DataFrame
+        # Creating DataFrame
         df = pd.DataFrame([case['data']])
         
-        # Підготовка даних
+        # Preparing data
         prepared_data = preprocessor.prepare_features(df, is_training=False)
         
-        # Переконаємось, що всі ознаки присутні
+        # Ensuring all features are present
         for col in preprocessor.feature_columns:
             if col not in prepared_data.columns:
                 prepared_data[col] = 0
         prepared_data = prepared_data[preprocessor.feature_columns]
         
-        # Прогноз
+        # Prediction
         prob = model.predict_proba(prepared_data)[0, 1]
         pred = model.predict(prepared_data)[0]
         
-        print(f"Дані клієнта:")
+        print(f"Client Data:")
         for key, value in case['data'].items():
             print(f"  {key}: {value}")
         
-        print(f"\nРезультат:")
-        print(f"  Ймовірність відтоку: {prob*100:.2f}%")
-        print(f"  Прогноз: {'Відтік' if pred else 'Залишиться'}")
-        print(f"  Рівень ризику: {'Високий' if prob >= 0.7 else 'Середній' if prob >= 0.4 else 'Низький'}")
+        print(f"\nResults:")
+        print(f"  Churn Probability: {prob*100:.2f}%")
+        print(f"  Prediction: {'Churn' if pred else 'Stay'}")
+        print(f"  Risk Level: {'High' if prob >= 0.7 else 'Medium' if prob >= 0.4 else 'Low'}")
 
 if __name__ == "__main__":
     test_predictions()

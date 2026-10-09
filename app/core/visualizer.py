@@ -3,21 +3,21 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 class ResultVisualizer:
-    """Візуалізація результатів прогнозування"""
+    """Visualization of prediction results"""
     
     @staticmethod
     def plot_risk_gauge(probability):
-        """Відображення індикатора ризику"""
+        """Displaying the risk gauge"""
         fig, ax = plt.subplots(figsize=(10, 2))
         
-        # Градієнт від зеленого до червоного
+        # Gradient from green to red
         gradient = np.linspace(0, 1, 100).reshape(1, -1)
         ax.imshow(gradient, cmap='RdYlGn_r', aspect='auto', extent=[0, 1, 0, 1])
         
-        # Позначка поточної ймовірності
+        # Marker for the current probability
         ax.axvline(x=probability, color='black', linewidth=3, linestyle='--')
         
-        # Текст з ймовірністю
+        # Text with probability
         ax.text(probability, 0.5, f'{probability*100:.1f}%', 
                ha='center', va='center', fontsize=20, fontweight='bold',
                bbox=dict(boxstyle='round,pad=0.3', facecolor='white', alpha=0.8))
@@ -27,31 +27,31 @@ class ResultVisualizer:
         ax.set_xticks([0, 0.25, 0.5, 0.75, 1.0])
         ax.set_xticklabels(['0%', '25%', '50%', '75%', '100%'])
         ax.set_yticks([])
-        ax.set_title('Ймовірність відтоку клієнта', fontsize=14, fontweight='bold')
+        ax.set_title('Probability of Customer Churn', fontsize=14, fontweight='bold')
         
         return fig
     
     @staticmethod
     def get_recommendation(probability):
-        """Отримання рекомендацій на основі ймовірності"""
+        """Getting recommendations based on probability"""
         if probability >= 0.7:
             return {
                 'type': 'error',
-                'title': 'Терміново вжити заходів для утримання клієнта!',
+                'title': 'Act immediately to retain the customer!',
                 'actions': [
-                    'Запропонувати спеціальну знижку або бонус',
-                    'Провести опитування задоволеності',
-                    'Запропонувати покращення пакету послуг'
+                    'Propose a special discount or bonus',
+                    'Conduct a satisfaction survey',
+                    'Propose improvements to the service package'
                 ]
             }
         elif probability >= 0.4:
             return {
                 'type': 'warning',
-                'title': 'Рекомендується моніторинг поведінки клієнта',
+                'title': 'Recommendation: Monitor customer behavior',
                 'actions': [
-                    'Відстежувати зміни в використанні послуг',
-                    'Періодично надсилати пропозиції',
-                    'Підтримувати комунікацію'
+                    'Track changes in service usage',
+                    'Periodically send offers',
+                    'Maintain communication'
                 ]
             }
         else:

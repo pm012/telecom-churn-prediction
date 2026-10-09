@@ -8,17 +8,17 @@ sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 from src.data_preprocessing import DataPreprocessor
 
 def test_extreme_cases():
-    """Тестування екстремальних випадків"""
+    """Testing Extreme Cases"""
     
-    # Завантаження моделі
+    # Loading the model
     model = joblib.load('models/best_model.pkl')
     preprocessor = DataPreprocessor()
     preprocessor.load_preprocessor('models/preprocessor.pkl')
     
-    # Екстремальні тестові випадки
+    # Extreme test cases
     test_cases = [
         {
-            'name': 'Дуже низький ризик',
+            'name': 'Very Low Risk',
             'data': {
                 'is_tv_subscriber': 1,
                 'is_movie_package_subscriber': 1,
@@ -32,7 +32,7 @@ def test_extreme_cases():
             }
         },
         {
-            'name': 'Високий ризик (екстремальний)',
+            'name': 'High Risk (Extreme)',
             'data': {
                 'is_tv_subscriber': 0,
                 'is_movie_package_subscriber': 0,
@@ -46,7 +46,7 @@ def test_extreme_cases():
             }
         },
         {
-            'name': 'Ваш тест 1',
+            'name': 'Your Test 1',
             'data': {
                 'is_tv_subscriber': 0,
                 'is_movie_package_subscriber': 0,
@@ -60,7 +60,7 @@ def test_extreme_cases():
             }
         },
         {
-            'name': 'Ваш тест 2',
+            'name': 'Your Test 2',
             'data': {
                 'is_tv_subscriber': 1,
                 'is_movie_package_subscriber': 1,
@@ -76,7 +76,7 @@ def test_extreme_cases():
     ]
     
     print("="*60)
-    print("ТЕСТУВАННЯ ЕКСТРЕМАЛЬНИХ ВИПАДКІВ")
+    print("TESTING EXTREME CASES")
     print("="*60)
     
     for case in test_cases:
@@ -94,9 +94,9 @@ def test_extreme_cases():
         prob = model.predict_proba(prepared_data)[0, 1]
         pred = model.predict(prepared_data)[0]
         
-        print(f"Дані: {case['data']}")
-        print(f"Ймовірність відтоку: {prob*100:.2f}%")
-        print(f"Прогноз: {'Відтік' if pred else 'Залишиться'}")
+        print(f"Data: {case['data']}")
+        print(f"Churn Probability: {prob*100:.2f}%")
+        print(f"Prediction: {'Churn' if pred else 'Stay'}")
 
 if __name__ == "__main__":
     test_extreme_cases()

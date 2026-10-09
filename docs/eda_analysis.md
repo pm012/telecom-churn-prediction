@@ -1,59 +1,59 @@
-# EDA та обґрунтування підходу
+# EDA and rationale for the approach
 
-## 1. Мета аналізу
+## 1. Analysis goal
 
-Етап EDA був виконаний для того, щоб зрозуміти структуру даних, виявити потенційні проблеми перед обробкою та обґрунтувати вибір методів підготовки ознак для моделі.
+The EDA stage was conducted to understand the data structure, identify potential issues before preprocessing, and justify the choice of feature preparation methods for the model.
 
-## 2. Основні спостереження
+## 2. Key observations
 
-### 2.1. Розмір датасету
+### 2.1. Dataset size
 
-Датасет містить 72 274 рядки та 11 стовпців. Цільова змінна — `churn`.
+The dataset contains 72,274 rows and 11 columns. The target variable is `churn`.
 
-### 2.2. Розподіл цільової змінної
+### 2.2. Target variable distribution
 
-Частка клієнтів із відтоком становить приблизно 55.4%, що означає, що клас балансований достатньо для застосування стандартних підходів до класифікації.
+The share of customers with churn is approximately 55.4%, which means the class is balanced enough for applying standard classification approaches.
 
-### 2.3. Пропуски в даних
+### 2.3. Missing data
 
-У датасеті виявлено пропуски у полі `remaining_contract` (21 572), а також у `download_avg` і `upload_avg` (381 кожне). Це важливо, оскільки неповні дані можуть суттєво впливати на якість моделі.
+The dataset contains missing values in the `remaining_contract` field (21,572), as well as in `download_avg` and `upload_avg` (381 each). This is important because incomplete data can significantly affect model quality.
 
-### 2.4. Базові статистичні характеристики
+### 2.4. Basic statistical characteristics
 
-Серед числових ознак виділяються:
+Among the numerical features, the following stand out:
 
-- `remaining_contract` — має від’ємну кореляцію з цільовою змінною;
-- `download_avg` — також демонструє помітний зв’язок із ймовірністю відтоку;
-- `service_failure_count` має слабкий, але позитивний зв’язок із `churn`.
+- `remaining_contract` — has a negative correlation with the target variable;
+- `download_avg` — also shows a noticeable relationship with the probability of churn;
+- `service_failure_count` has a weak but positive correlation with `churn`.
 
-### 2.5. Зв’язок категоріальних ознак із відтоком
+### 2.5. Relationship between categorical features and churn
 
-У вибірці спостерігається суттєва різниця між групами:
+The sample shows a significant difference between groups:
 
-- клієнти без підписки на ТБ мають набагато вищий відтік: приблизно 89.6% проти 47.7% для тих, хто має таку підписку;
-- клієнти без підписки на кіно також частіше припиняють користування послугами: 66.2% проти 33.9%.
+- customers without a TB subscription have much higher churn: approximately 89.6% versus 47.7% for those who have such a subscription;
+- customers without a movie subscription also churn more often: 66.2% versus 33.9%.
 
-Це підтверджує, що бінарні ознаки підписок містять корисну інформацію для моделі.
+This confirms that binary subscription features contain useful information for the model.
 
-## 3. Обґрунтування preprocessing
+## 3. Rationale for preprocessing
 
-На основі EDA було прийнято такі рішення:
+Based on the EDA, the following decisions were made:
 
-1. Пропуски в числових ознаках заповнено медіаною, що є стійкішим до викидів, ніж середнє.
-2. Для категоріальних ознак застосовано заповнення модою.
-3. Для числових ознак використано стандартизацію, щоб уникнути переваги ознак з більшим масштабом.
-4. Для категоріальних ознак застосовано кодування, щоб модель могла працювати з ними як з числовими даними.
-5. Було використано стратифікований розподіл на train/test, оскільки цільова змінна не є сильно дисбалансованою.
+1. Missing values in numerical features were filled with the median, which is more robust to outliers than the mean.
+2. For categorical features, missing values were filled with the mode.
+3. Standardization was applied to numerical features to avoid giving an advantage to features with a larger scale.
+4. Categorical features were encoded so the model could work with them as numerical data.
+5. A stratified train/test split was used because the target variable is not strongly imbalanced.
 
-## 4. Обґрунтування вибору моделі
+## 4. Rationale for model selection
 
-Після підготовки даних було протестовано кілька алгоритмів. Найкращі результати показали LightGBM і XGBoost: LightGBM трохи випередив за Accuracy, Recall і F1-score, а XGBoost демонстрував найвищий ROC-AUC.
+After preparing the data, several algorithms were tested. The best results were shown by LightGBM and XGBoost: LightGBM slightly outperformed in Accuracy, Recall, and F1-score, while XGBoost showed the highest ROC-AUC.
 
-Найкращі отримані метрики за результатами оцінювання:
+The best metrics obtained from evaluation are:
 
 - LightGBM: Accuracy 0.9436, Precision 0.9564, Recall 0.9412, F1-score 0.9487, ROC-AUC 0.9826
 - XGBoost: Accuracy 0.9429, Precision 0.9565, Recall 0.9396, F1-score 0.9480, ROC-AUC 0.9829
 
-## 5. Висновки
+## 5. Conclusions
 
-EDA допомогло не лише зрозуміти дані, а й обґрунтувати підхід до їхньої обробки. Завдяки цьому було досягнуто високих показників якості, зокрема для LightGBM і XGBoost, а проєкт став не лише технічною реалізацією, а й практично застосовним рішенням для аналізу відтоку клієнтів.
+EDA helped not only to understand the data, but also to justify the approach to preprocessing it. As a result, high-quality metrics were achieved, particularly for LightGBM and XGBoost, and the project became not only a technical implementation, but also a practically applicable solution for customer churn analysis.

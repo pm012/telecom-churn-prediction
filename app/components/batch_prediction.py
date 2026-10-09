@@ -3,11 +3,11 @@ import streamlit as st
 import pandas as pd
 
 class BatchPredictionComponent:
-    """Компонент для пакетного прогнозування"""
+    """Component for batch prediction"""
     
     REQUIRED_COLUMNS = [
         'is_tv_subscriber', 'is_movie_package_subscriber', 'subscription_age',
-        'bill_avg', 'remaining_contract',  # Саме так, як в навчальних даних
+        'bill_avg', 'remaining_contract',  # Same as in the training data
         'service_failure_count', 'download_avg', 'upload_avg', 'download_over_limit'
     ]
     
@@ -15,21 +15,21 @@ class BatchPredictionComponent:
         self.predictor = predictor
     
     def render(self):
-        """Відображення форми пакетної обробки"""
-        st.header("Пакетна обробка даних")
+        """Displaying the batch processing form"""
+        st.header("Batch Processing of Data")
         st.markdown("""
-        Завантажте CSV файл з даними клієнтів для масового прогнозування.
+        Upload a CSV file with customer data for batch prediction.
         
-        **Важливо:** Файл повинен містити колонки:
+        **Important:** The file must contain the following columns:
         - `is_tv_subscriber`, `is_movie_package_subscriber`, `subscription_age`
         - `bill_avg`, `remaining_contract`
         - `service_failure_count`, `download_avg`, `upload_avg`, `download_over_limit`
         """)
         
         uploaded_file = st.file_uploader(
-            "Виберіть CSV файл",
+            "Upload CSV file",
             type=['csv'],
-            help="Файл повинен містити ті ж колонки, що й навчальні дані"
+            help="File must contain the same columns as the training data"
         )
         
         if uploaded_file is not None:
@@ -38,58 +38,58 @@ class BatchPredictionComponent:
                 self._display_data_preview(data)
                 
                 if self._validate_columns(data):
-                    if st.button("Прогнозувати", type="primary"):
+                    if st.button("Predict", type="primary"):
                         self._process_batch(data)
                 
             except Exception as e:
-                st.error(f"Помилка при обробці файлу: {e}")
+                st.error(f"Error occurred while processing the file: {e}")
     
     def _display_data_preview(self, data):
-        """Відображення попереднього перегляду даних"""
-        st.subheader("Попередній перегляд даних")
+        """Displaying the preview of the data"""
+        st.subheader("Data Preview")
         st.dataframe(data.head(10))
-        st.caption(f"Загалом {len(data)} клієнтів")
+        st.caption(f"Total customers: {len(data)}")
     
     def _validate_columns(self, data):
-        """Валідація колонок даних"""
+        """Validating data columns"""
         missing_cols = [col for col in self.REQUIRED_COLUMNS if col not in data.columns]
         if missing_cols:
-            st.warning(f"Відсутні колонки: {missing_cols}")
+            st.warning(f"Missing columns: {missing_cols}")
             return False
         return True
     
     def _process_batch(self, data):
-        """Обробка пакетних даних"""
-        with st.spinner("Обробка даних..."):
+        """Processing batch data"""
+        with st.spinner("Processing data..."):
             results = self.predictor.predict_batch(data)
             self._display_batch_results(results)
     
     def _display_batch_results(self, results):
-        """Відображення результатів пакетної обробки"""
-        st.subheader("Статистика результатів")
+        """Displaying batch processing results"""
+        st.subheader("Results Statistics")
         
         col1, col2, col3 = st.columns(3)
         churn_count = results['churn_prediction'].sum()
         
         with col1:
-            st.metric("Прогнозований відтік", f"{churn_count} клієнтів")
+            st.metric("Predicted Churn", f"{churn_count} customers")
         
         with col2:
-            st.metric("Рівень відтоку", f"{churn_count/len(results)*100:.1f}%")
+            st.metric("Churn Rate", f"{churn_count/len(results)*100:.1f}%")
         
         with col3:
             high_risk = len(results[results['risk_level'] == 'Високий'])
-            st.metric("Високий ризик", f"{high_risk} клієнтів")
+            st.metric("High Risk", f"{high_risk} customers")
         
         if 'model_used' in results.columns:
-            st.info(f"**Використана модель:** {results['model_used'].iloc[0]}")
+            st.info(f"**Model Used:** {results['model_used'].iloc[0]}")
         
-        st.subheader("Детальні результати")
+        st.subheader("Detailed Results")
         st.dataframe(results)
         
         csv = results.to_csv(index=False)
         st.download_button(
-            label="Завантажити результати (CSV)",
+            label="Download Results (CSV)",
             data=csv,
             file_name="churn_predictions.csv",
             mime="text/csv"

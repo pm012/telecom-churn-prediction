@@ -13,65 +13,65 @@ from app.components.sidebar import Sidebar
 from app.components.single_prediction import SinglePredictionComponent
 from app.components.batch_prediction import BatchPredictionComponent
 
-# Налаштування сторінки
+# Page configuration
 st.set_page_config(
-    page_title="Прогнозування відтоку клієнтів",
+    page_title="Prediction of Customer Churn",
     page_icon="📊",
     layout="wide",
     initial_sidebar_state="expanded"
 )
 
-# Заголовок
-st.title("Прогнозування відтоку клієнтів телекомунікаційної компанії")
+# Header
+st.title("Prediction of Customer Churn")
 st.markdown("""
-Цей застосунок використовує машинне навчання для прогнозування ймовірності відтоку клієнтів.
-Виберіть модель у бічній панелі та введіть дані клієнта для отримання прогнозу.
+This application uses machine learning to predict the probability of customer churn.
+Select a model in the sidebar and enter customer data to get a prediction.
 """)
 
-# Ініціалізація менеджера моделей
+# Initialization of the model manager
 model_manager = ModelManager()
 models, preprocessor, model_results = model_manager.load_all_models()
 
 if not models:
-    st.error("Не вдалося завантажити жодну модель. Переконайтеся, що моделі існують у папці 'models'.")
+    st.error("Failed to load any models. Please ensure models exist in the 'models' directory.")
     st.stop()
 
-# Отримання доступних моделей
+# Getting available models
 available_models = list(models.keys())
 
-# Відображення бічної панелі та вибір моделі
+# Rendering sidebar and selecting model
 selected_model = Sidebar.render(available_models, model_results)
 
 if selected_model is None:
     selected_model = available_models[0] if available_models else None
 
 if selected_model is None:
-    st.error("Немає доступних моделей для прогнозування.")
+    st.error("No available models for prediction.")
     st.stop()
 
-# Завантаження обраної моделі
+# Loading the selected model
 model = models[selected_model]
 
-# Ініціалізація компонентів з ПЕРЕДАЧЕЮ НАЗВИ МОДЕЛІ
+# Initializing components with model name
 predictor = ChurnPredictor(model, preprocessor, model_name=selected_model)  # <-- Ось виправлення!
 visualizer = ResultVisualizer()
 
-# Визначення режиму роботи
+# Determining the working mode
 mode = st.sidebar.radio(
-    "Виберіть режим роботи:",
-    ["Один клієнт", "Пакетна обробка (CSV файл)"]
+    "Select working mode:",
+    ["Single Client", "Batch Processing (CSV file)"]
 )
 
-# Основний контент
-if mode == "Один клієнт":
+# Main content
+if mode == "Single Client":
     SinglePredictionComponent(predictor, visualizer).render()
 else:
     BatchPredictionComponent(predictor).render()
 
-# Футер
+# Footer
 st.divider()
 st.markdown(f"""
-**Технології:** Python, Streamlit, Scikit-learn, LightGBM, XGBoost, Pandas
+**Technologies:** Python, Streamlit, Scikit-learn, LightGBM, XGBoost, Pandas
 
-**Обрана модель:** {selected_model}
+**Selected Model:** {selected_model}
 """)

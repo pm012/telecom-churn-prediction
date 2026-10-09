@@ -2,59 +2,59 @@
 # run_all.sh - Повний запуск проекту
 
 echo "=========================================="
-echo "ПОВНИЙ ЗАПУСК ПРОЕКТУ"
+echo "FULL PROJECT RUN"
 echo "=========================================="
 
-# 1. Очищення
+# 1. Cleaning old models
 echo ""
-echo "[1/5] Очищення старих моделей..."
+echo "[1/5] Cleaning old models..."
 rm -rf models/
 mkdir -p models
-echo "Папку models очищено"
+echo "Models folder cleared"
 
-# 2. Обробка даних
+# 2. Data preprocessing
 echo ""
-echo "[2/5] Запуск data_preprocessing.py..."
+echo "[2/5] Running data_preprocessing.py..."
 python src/data_preprocessing.py
 if [ $? -ne 0 ]; then
-    echo "Помилка в data_preprocessing.py"
+    echo "Error in data_preprocessing.py"
     exit 1
 fi
-echo "data_preprocessing.py виконано"
+echo "data_preprocessing.py completed"
 
-# 3. Навчання моделей
+# 3. Training models
 echo ""
-echo "[3/5] Запуск model_training.py..."
+echo "[3/5] Running model_training.py..."
 python src/model_training.py
 if [ $? -ne 0 ]; then
-    echo "Помилка в model_training.py"
+    echo "Error in model_training.py"
     exit 1
 fi
-echo "model_training.py виконано"
+echo "model_training.py completed"
 
-# 4. Оцінка моделей
+# 4. Model evaluation
 echo ""
-echo "[4/5] Запуск model_evaluation.py..."
+echo "[4/5] Running model_evaluation.py..."
 python src/model_evaluation.py
 if [ $? -ne 0 ]; then
-    echo "Помилка в model_evaluation.py"
+    echo "Error in model_evaluation.py"
     exit 1
 fi
-echo "model_evaluation.py виконано"
+echo "model_evaluation.py completed"
 
-# 5. Фінальна перевірка
+# 5. Final check
 echo ""
-echo "[5/5] Перевірка результатів..."
-ls -lh models/*.pkl 2>/dev/null || echo "Моделі не знайдено"
-ls -lh models/*.csv 2>/dev/null || echo "Результати не знайдено"
+echo "[5/5] Checking results..."
+ls -lh models/*.pkl 2>/dev/null || echo "Models not found"
+ls -lh models/*.csv 2>/dev/null || echo "Results not found"
 
 echo ""
 echo "=========================================="
-echo "ПРОЕКТ УСПІШНО ЗАВЕРШЕНО!"
+echo "PROJECT COMPLETED SUCCESSFULLY!"
 echo "=========================================="
 echo ""
-echo "Моделі збережено в: models/"
-echo "Результати: models/model_results.csv"
+echo "Models saved in: models/"
+echo "Results: models/model_results.csv"
 echo ""
-echo "Запустіть веб-додаток:"
+echo "Start the web application:"
 echo "streamlit run app/main.py"

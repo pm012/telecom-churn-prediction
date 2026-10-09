@@ -1,4 +1,4 @@
-.venv
+.ds_env
 venv
 .git
 ,gitignore
