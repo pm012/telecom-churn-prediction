@@ -1,18 +1,40 @@
-# src/model_training.py
-import pandas as pd
-import numpy as np
-from sklearn.ensemble import RandomForestClassifier, GradientBoostingClassifier
-from sklearn.linear_model import LogisticRegression
-from sklearn.neighbors import KNeighborsClassifier
-from sklearn.tree import DecisionTreeClassifier
-from sklearn.model_selection import GridSearchCV, RandomizedSearchCV
-from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score, roc_auc_score
-import xgboost as xgb
-import lightgbm as lgb
-import joblib
 import os
 import warnings
+
+import joblib
+import numpy as np
+import pandas as pd
+import xgboost as xgb
+import lightgbm as lgb
+from sklearn.ensemble import GradientBoostingClassifier, RandomForestClassifier
+from sklearn.linear_model import LogisticRegression
+from sklearn.metrics import (
+    accuracy_score,
+    brier_score_loss,
+    f1_score,
+    precision_score,
+    recall_score,
+    roc_auc_score,
+)
+from sklearn.model_selection import (
+    ParameterGrid,
+    RandomizedSearchCV,
+    RepeatedStratifiedKFold,
+    cross_val_score,
+)
+from sklearn.neighbors import KNeighborsClassifier
+from sklearn.pipeline import Pipeline
+from sklearn.tree import DecisionTreeClassifier
+
+try:
+    from .data_preprocessing import DataPreprocessor
+    from .prediction_policy import CHURN_DECISION_THRESHOLD
+except ImportError:
+    from data_preprocessing import DataPreprocessor
+    from prediction_policy import CHURN_DECISION_THRESHOLD
+
 warnings.filterwarnings('ignore')
+
 
 class ModelTrainer:
     def __init__(self):
@@ -20,251 +42,241 @@ class ModelTrainer:
         self.best_model = None
         self.best_model_name = None
         self.best_params = None
+        self.best_preprocessor = None
+        self.best_cv_score = None
         self.results = {}
         self.trained_models = {}
-        
+
     def create_models(self):
-        """Create dictionary with different models"""
-        models = {
-            'Logistic Regression': LogisticRegression(random_state=42, max_iter=1000),            
+        self.models = {
+            'Logistic Regression': LogisticRegression(random_state=42, max_iter=1000),
             'Random Forest': RandomForestClassifier(random_state=42, n_jobs=1),
-            'Gradient Boosting': GradientBoostingClassifier(random_state=42),                        
-            'XGBoost': xgb.XGBClassifier(random_state=42, objective='binary:logistic', eval_metric='logloss', tree_method='hist', n_jobs=1),
-            'LightGBM': lgb.LGBMClassifier(random_state=42, verbose=-1, n_jobs=1, force_col_wise=True),
+            'Gradient Boosting': GradientBoostingClassifier(random_state=42),
+            'XGBoost': xgb.XGBClassifier(
+                random_state=42,
+                objective='binary:logistic',
+                eval_metric='logloss',
+                tree_method='hist',
+                n_jobs=1,
+            ),
+            'LightGBM': lgb.LGBMClassifier(
+                random_state=42,
+                verbose=-1,
+                n_jobs=1,
+                force_col_wise=True,
+            ),
             'Decision Tree': DecisionTreeClassifier(random_state=42),
-            'KNN': KNeighborsClassifier()
+            'KNN': KNeighborsClassifier(),
         }
-        self.models = models
-        return models
-    
+        return self.models
+
     def get_param_grid(self, model_name):
-        """Get parameter grid for a model"""
-        param_grids = {
+        return {
             'Logistic Regression': {
                 'C': [0.01, 0.1, 1, 10],
                 'penalty': ['l1', 'l2'],
-                'solver': ['liblinear', 'saga']
+                'solver': ['liblinear', 'saga'],
             },
             'Random Forest': {
                 'n_estimators': [50, 100, 200],
                 'max_depth': [5, 10, 15, None],
                 'min_samples_split': [2, 5, 10],
-                'min_samples_leaf': [1, 2, 4]
+                'min_samples_leaf': [1, 2, 4],
             },
             'Gradient Boosting': {
                 'n_estimators': [50, 100, 200],
                 'learning_rate': [0.01, 0.1, 0.3],
-                'max_depth': [3, 5, 7]
+                'max_depth': [3, 5, 7],
             },
             'XGBoost': {
                 'n_estimators': [50, 100, 200],
                 'learning_rate': [0.01, 0.1, 0.3],
                 'max_depth': [3, 5, 7],
                 'subsample': [0.8, 1.0],
-                'colsample_bytree': [0.8, 1.0]
+                'colsample_bytree': [0.8, 1.0],
             },
             'LightGBM': {
                 'n_estimators': [50, 100, 200],
                 'learning_rate': [0.01, 0.1, 0.3],
                 'num_leaves': [31, 50, 70],
-                'max_depth': [5, 10, 15]
+                'max_depth': [5, 10, 15],
             },
             'Decision Tree': {
                 'max_depth': [5, 10, 15, None],
                 'min_samples_split': [2, 5, 10],
-                'min_samples_leaf': [1, 2, 4]
+                'min_samples_leaf': [1, 2, 4],
             },
             'KNN': {
                 'n_neighbors': [3, 5, 7, 9, 11],
                 'weights': ['uniform', 'distance'],
-                'metric': ['euclidean', 'manhattan', 'minkowski']
-            }
-        }
-        return param_grids.get(model_name, {})
-    
-    def train_model(self, X_train, y_train, model_name, param_grid=None):
-        """Train a model using controlled hyperparameter search."""
-        y_train = np.asarray(y_train).ravel()
+                'metric': ['euclidean', 'manhattan', 'minkowski'],
+            },
+        }.get(model_name, {})
 
-            # === DEBUG ===
-        print(f"\n[DEBUG-{model_name}] y_train after ravel: shape={y_train.shape}, unique={np.unique(y_train)[:10]}")
-        # === /DEBUG ===
+    @staticmethod
+    def _build_pipeline(model):
+        return Pipeline([
+            ('preprocessor', DataPreprocessor()),
+            ('model', model),
+        ])
 
-        model = self.models[model_name]
+    def train_model(self, X_train, y_train, model_name, param_grid=None, cv=None):
+        estimator = self._build_pipeline(self.models[model_name])
+        parameters = self.get_param_grid(model_name) if param_grid is None else param_grid
+        if parameters:
+            parameters = {f'model__{name}': values for name, values in parameters.items()}
+        if cv is None:
+            cv = RepeatedStratifiedKFold(n_splits=3, n_repeats=2, random_state=42)
 
-        if param_grid is None:
-            param_grid = self.get_param_grid(model_name)
-
-        if not param_grid:
-            model.fit(X_train, y_train)
-            return model, {}
-
-        print(f"  Searching for optimal hyperparameters for {model_name}...")
-
-        if model_name == "LightGBM":
-            search = RandomizedSearchCV(
-                estimator=model,
-                param_distributions=param_grid,
-                n_iter=20,
-                cv=3,
-                scoring="roc_auc",
+        if not parameters:
+            scores = cross_val_score(
+                estimator,
+                X_train,
+                np.asarray(y_train).ravel(),
+                cv=cv,
+                scoring='roc_auc',
                 n_jobs=4,
-                pre_dispatch=4,
-                verbose=2,
-                random_state=42,
-                error_score="raise",
-                refit=True
             )
-        else:
-            search = GridSearchCV(
-                estimator=model,
-                param_grid=param_grid,
-                cv=3,
-                scoring="roc_auc",
-                n_jobs=4,
-                pre_dispatch=4,
-                verbose=1,
-                error_score="raise",
-                refit=True
-            )
+            estimator.fit(X_train, np.asarray(y_train).ravel())
+            return estimator, {}, float(scores.mean()), float(scores.std())
 
-        search.fit(X_train, y_train)
+        print(f'  Searching parameters for {model_name} with repeated stratified 3-fold CV (2 repeats)...')
+        candidates = min(12, len(ParameterGrid(parameters)))
+        search = RandomizedSearchCV(
+            estimator=estimator,
+            param_distributions=parameters,
+            n_iter=candidates,
+            cv=cv,
+            scoring='roc_auc',
+            n_jobs=4,
+            pre_dispatch=4,
+            verbose=1,
+            random_state=42,
+            error_score='raise',
+            refit=True,
+        )
 
-        print(f"  Optimal parameters: {search.best_params_}")
-        print(f"  Best CV ROC-AUC: {search.best_score_:.4f}")
-
-        return search.best_estimator_, search.best_params_
-    
-    def evaluate_model(self, model, X_test, y_test):
-        """Evaluate model with different metrics"""
-        y_test = np.asarray(y_test).ravel() 
-        y_pred = model.predict(X_test)
-        y_pred_proba = model.predict_proba(X_test)[:, 1] if hasattr(model, 'predict_proba') else None
-        
-        metrics = {
-            'accuracy': accuracy_score(y_test, y_pred),
-            'precision': precision_score(y_test, y_pred, average='binary'),
-            'recall': recall_score(y_test, y_pred, average='binary'),
-            'f1': f1_score(y_test, y_pred, average='binary')
+        search.fit(X_train, np.asarray(y_train).ravel())
+        best_params = {
+            name.removeprefix('model__'): value
+            for name, value in search.best_params_.items()
         }
-        
-        if y_pred_proba is not None:
-            metrics['roc_auc'] = roc_auc_score(y_test, y_pred_proba)
-        
-        return metrics
-    
+        print(f'  Best CV ROC-AUC: {search.best_score_:.4f} +/- '
+              f'{search.cv_results_["std_test_score"][search.best_index_]:.4f}')
+        print(f'  Optimal parameters: {best_params}')
+        return (
+            search.best_estimator_,
+            best_params,
+            float(search.best_score_),
+            float(search.cv_results_['std_test_score'][search.best_index_]),
+        )
+
+    @staticmethod
+    def evaluate_model(model, preprocessor, X_test, y_test):
+        X_test_prepared = preprocessor.transform(X_test)
+        y_true = np.asarray(y_test).ravel()
+        probabilities = model.predict_proba(X_test_prepared)[:, 1]
+        predictions = probabilities >= CHURN_DECISION_THRESHOLD
+        return {
+            'accuracy': accuracy_score(y_true, predictions),
+            'precision': precision_score(y_true, predictions, zero_division=0),
+            'recall': recall_score(y_true, predictions, zero_division=0),
+            'f1': f1_score(y_true, predictions, zero_division=0),
+            'roc_auc': roc_auc_score(y_true, probabilities),
+            'brier_score': brier_score_loss(y_true, probabilities),
+        }
+
     def train_all_models(self, X_train, y_train, X_test, y_test, tune_hyperparams=True):
-        """Train and evaluate all models"""
         self.create_models()
-    
-        for model_name in self.models.keys():
-            for model_name in self.models.keys():
-                print(f"\n{'='*50}")
-                print(f"Training model: {model_name}")
-                
-                try:
-                    best_model, best_params = self.train_model(
-                        X_train, y_train, model_name, 
-                        param_grid=self.get_param_grid(model_name) if tune_hyperparams else None
-                    )
-                    
-                    metrics = self.evaluate_model(best_model, X_test, y_test)
-                    
-                    self.results[model_name] = {
-                        'model': best_model,
-                        'params': best_params,
-                        'metrics': metrics
-                    }
-                    
-                    # Save each trained model
-                    self.trained_models[model_name] = best_model
-                    
-                    print(f"  Metrics for {model_name}:")
-                    for metric, value in metrics.items():
-                        print(f"    {metric}: {value:.4f}")
-                    
-                    if self.best_model is None or metrics['roc_auc'] > self.results[self.best_model_name]['metrics']['roc_auc']:
-                        self.best_model = best_model
-                        self.best_model_name = model_name
-                        self.best_params = best_params
-                        
-                except Exception as e:
-                    print(f"  Error occurred while training {model_name}: {e}")
-            
-            print(f"\n{'='*50}")
-            print(f"Best model: {self.best_model_name}")
-            print(f"Optimal parameters: {self.best_params}")
-            
-            return self.best_model
-    
+        cv = RepeatedStratifiedKFold(n_splits=3, n_repeats=2, random_state=42)
+
+        for model_name in self.models:
+            print(f'\n{"=" * 50}\nTraining model: {model_name}')
+            params = self.get_param_grid(model_name) if tune_hyperparams else {}
+            fitted_pipeline, best_params, cv_score, cv_std = self.train_model(
+                X_train,
+                y_train,
+                model_name,
+                param_grid=params,
+                cv=cv,
+            )
+            fitted_model = fitted_pipeline.named_steps['model']
+            fitted_preprocessor = fitted_pipeline.named_steps['preprocessor']
+            metrics = self.evaluate_model(fitted_model, fitted_preprocessor, X_test, y_test)
+
+            self.results[model_name] = {
+                'model': fitted_model,
+                'params': best_params,
+                'cv_roc_auc': cv_score,
+                'cv_roc_auc_std': cv_std,
+                'metrics': metrics,
+            }
+            self.trained_models[model_name] = fitted_model
+            print(f'  Holdout metrics: {metrics}')
+
+            if self.best_cv_score is None or cv_score > self.best_cv_score:
+                self.best_model = fitted_model
+                self.best_preprocessor = fitted_preprocessor
+                self.best_model_name = model_name
+                self.best_params = best_params
+                self.best_cv_score = cv_score
+
+        print(f'\nSelected by training-only CV: {self.best_model_name}')
+        print(f'Best CV ROC-AUC: {self.best_cv_score:.4f}')
+        return self.best_model
+
     def save_all_models(self, base_path='models'):
-        """Saving all trained models"""
         os.makedirs(base_path, exist_ok=True)
-        
-        # Save each trained model
         for model_name, model in self.trained_models.items():
             safe_name = model_name.lower().replace(' ', '_')
-            file_path = f'{base_path}/{safe_name}_model.pkl'
+            file_path = os.path.join(base_path, f'{safe_name}_model.pkl')
             joblib.dump(model, file_path)
-            print(f"Saved model: {model_name} -> {file_path}")
-        
-        # Saving the best model
-        if self.best_model:
-            joblib.dump(self.best_model, f'{base_path}/best_model.pkl')
-            print(f"Saved the best model: {base_path}/best_model.pkl")
-        
-        # Saving metrics
-        results_df = self.get_results_df()
-        results_df.to_csv(f'{base_path}/model_results.csv', index=False)
-        print(f"Saved metrics: {base_path}/model_results.csv")
-    
+            print(f'Saved model: {model_name} -> {file_path}')
+
+        if self.best_model is None or self.best_preprocessor is None:
+            raise RuntimeError('No trained model is available to save')
+        joblib.dump(self.best_model, os.path.join(base_path, 'best_model.pkl'))
+        self.best_preprocessor.save_preprocessor(os.path.join(base_path, 'preprocessor.pkl'))
+        self.get_results_df().to_csv(os.path.join(base_path, 'model_results.csv'), index=False)
+
     def get_results_df(self):
-        """Getting DataFrame with results of all models"""
-        results_data = []
+        rows = []
         for model_name, data in self.results.items():
-            row = {'Model': model_name}
+            row = {
+                'Model': model_name,
+                'cv_roc_auc': data['cv_roc_auc'],
+                'cv_roc_auc_std': data['cv_roc_auc_std'],
+            }
             row.update(data['metrics'])
             row['Optimal Parameters'] = str(data['params'])
-            results_data.append(row)
-        
-        return pd.DataFrame(results_data).sort_values('roc_auc', ascending=False)
+            rows.append(row)
+        return pd.DataFrame(rows).sort_values('cv_roc_auc', ascending=False)
 
-if __name__ == "__main__":
-    print("="*60)
-    print("LAUNCHING TRAINING OF ALL MODELS")
-    print("="*60)
-    
-    # Loading the preprocessor
-    try:
-        from .data_preprocessing import DataPreprocessor
-    except ImportError:
-        from data_preprocessing import DataPreprocessor
-    preprocessor = DataPreprocessor()
-    
-    # Checking if the preprocessor exists
-    if os.path.exists('models/preprocessor.pkl'):
-        preprocessor.load_preprocessor('models/preprocessor.pkl')
-    else:
-        print("Preprocessor not found. Creating a new one...")
-        df_temp = pd.read_csv('data/raw/internet_service_churn.csv', na_values=['', ' '])
-        features, target = preprocessor.prepare_features(df_temp, is_training=True)
-        preprocessor.save_preprocessor()
-    
-    # Loading data
-    print("\nLoading data...")
-    df = pd.read_csv('data/raw/internet_service_churn.csv', na_values=['', ' '])
-    features, target = preprocessor.prepare_features(df, is_training=True)
-    X_train, X_test, y_train, y_test = preprocessor.split_data(features, target)
-    
-    # Training models
-    print("\nStarting model training...")
+
+if __name__ == '__main__':
+    print('=' * 60)
+    print('TRAINING CHURN MODELS')
+    print('=' * 60)
+
+    data = pd.read_csv('data/raw/internet_service_churn.csv', na_values=['', ' ', 'NA', 'null', 'NULL'])
+    target = data['churn'].copy()
+    features = data.drop(columns='churn')
+    from sklearn.model_selection import train_test_split
+
+    X_train, X_test, y_train, y_test = train_test_split(
+        features,
+        target,
+        test_size=0.2,
+        random_state=42,
+        stratify=target,
+    )
+
     trainer = ModelTrainer()
-    best_model = trainer.train_all_models(X_train, y_train, X_test, y_test, tune_hyperparams=True)
-    
-    # Saving all models
-    print("\nSaving all models...")
+    trainer.train_all_models(X_train, y_train, X_test, y_test, tune_hyperparams=True)
     trainer.save_all_models('models')
-    
-    print("\n" + "="*60)
-    print(" ALL MODELS TRAINED AND SAVED SUCCESSFULLY!")
-    print("="*60)
+    trainer.best_preprocessor.save_processed_data(
+        trainer.best_preprocessor.transform(features),
+        target,
+    )
+    print(f'\nSelected model: {trainer.best_model_name}')
+    print(trainer.get_results_df().to_string(index=False))

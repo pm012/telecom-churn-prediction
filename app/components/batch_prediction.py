@@ -2,6 +2,13 @@
 import streamlit as st
 import pandas as pd
 
+from src.prediction_policy import (
+    CHURN_DECISION_THRESHOLD,
+    HIGH_RISK_THRESHOLD,
+    LOW_RISK_THRESHOLD,
+)
+
+
 class BatchPredictionComponent:
     """Component for batch prediction"""
     
@@ -23,8 +30,13 @@ class BatchPredictionComponent:
         **Important:** The file must contain the following columns:
         - `is_tv_subscriber`, `is_movie_package_subscriber`, `subscription_age`
         - `bill_avg`, `remaining_contract`
-        - `service_failure_count`, `download_avg`, `upload_avg`, `download_over_limit`
+        - `service_failure_count`, `download_avg`, `upload_avg`, `download_over_limit` (integer count, 0-7)
         """)
+        st.caption(
+            f"Churn cutoff: {CHURN_DECISION_THRESHOLD:.0%} (equal-cost assumption). "
+            f"Risk bands: Low < {LOW_RISK_THRESHOLD:.0%}, "
+            f"Medium < {HIGH_RISK_THRESHOLD:.0%}, High >= {HIGH_RISK_THRESHOLD:.0%}."
+        )
         
         uploaded_file = st.file_uploader(
             "Upload CSV file",
@@ -55,6 +67,14 @@ class BatchPredictionComponent:
         missing_cols = [col for col in self.REQUIRED_COLUMNS if col not in data.columns]
         if missing_cols:
             st.warning(f"Missing columns: {missing_cols}")
+            return False
+        raw_counts = data['download_over_limit']
+        counts = pd.to_numeric(raw_counts, errors='coerce')
+        invalid_counts = raw_counts.notna() & (
+            counts.isna() | (counts < 0) | (counts > 7) | (counts % 1 != 0)
+        )
+        if invalid_counts.any():
+            st.warning("`download_over_limit` must be an integer count between 0 and 7.")
             return False
         return True
     

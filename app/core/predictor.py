@@ -1,6 +1,13 @@
 # app/core/predictor.py
 import pandas as pd
-import numpy as np
+
+from src.prediction_policy import (
+    CHURN_DECISION_THRESHOLD,
+    HIGH_RISK_THRESHOLD,
+    LOW_RISK_THRESHOLD,
+    classify_risk,
+    predict_churn,
+)
 
 class ChurnPredictor:
     """Class for churn prediction"""
@@ -27,8 +34,8 @@ class ChurnPredictor:
         prepared_data = prepared_data[self.preprocessor.feature_columns]
         
         # Predict
-        probability = self.model.predict_proba(prepared_data)[0, 1]
-        prediction = self.model.predict(prepared_data)[0]
+        probability = float(self.model.predict_proba(prepared_data)[0, 1])
+        prediction = predict_churn(probability)
         
         return {
             'probability': probability,
@@ -60,7 +67,7 @@ class ChurnPredictor:
         
         # Predict
         probabilities = self.model.predict_proba(prepared_data)[:, 1]
-        predictions = self.model.predict(prepared_data)
+        predictions = probabilities >= CHURN_DECISION_THRESHOLD
         
         results = data.copy()
         results['churn_probability'] = probabilities
@@ -72,20 +79,14 @@ class ChurnPredictor:
     
     @staticmethod
     def _get_risk_level(probability):
-        """Determination of risk level"""
-        if probability >= 0.7:
-            return 'High'
-        elif probability >= 0.4:
-            return 'Medium'
-        else:
-            return 'Low'
+        return classify_risk(probability)
     
     @staticmethod
     def get_risk_color(probability):
         """Getting the color for the risk level"""
-        if probability >= 0.7:
+        if probability >= HIGH_RISK_THRESHOLD:
             return '#FF4B4B'
-        elif probability >= 0.4:
+        elif probability >= LOW_RISK_THRESHOLD:
             return '#FFA500'
         else:
             return '#4CAF50'

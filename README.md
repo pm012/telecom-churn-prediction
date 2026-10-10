@@ -18,9 +18,9 @@ The dataset contains 72,274 rows and 11 columns. The target variable is `churn`.
 
 Key characteristics:
 
-- churn rate is about 55.4%;
-- missing values are present in `remaining_contract`, `download_avg`, and `upload_avg`;
-- the dataset includes both binary subscription indicators and numeric usage and billing features.
+- approximately 55.4% of records are churn cases, so the target is mildly imbalanced;
+- missing values occur in `remaining_contract` (21,572; 29.85%), `download_avg` (381; 0.53%), and `upload_avg` (381; 0.53%);
+- predictors include binary subscription indicators and numeric usage, billing, contract, and over-limit counts (`download_over_limit` ranges from 0 to 7 in the source data).
 
 ## EDA and modeling rationale
 
@@ -31,41 +31,48 @@ EDA was used to inspect:
 - basic descriptive statistics of numerical features;
 - the structure and types of available features.
 
-These checks justified the preprocessing strategy:
-
-- missing numerical values were imputed with the median;
-- categorical values were filled with the mode;
-- numeric features were standardized;
-- a stratified train/test split was used because the target is reasonably balanced.
+The preprocessing pipeline adds a `remaining_contract_missing` indicator before median-imputing that field, median-imputes numeric fields, and mode-imputes the binary subscription flags. It fits all preprocessing inside each cross-validation training fold. A stratified 80/20 split preserves target proportions, and the scaler is never fitted on holdout rows.
 
 ## Model training
 
 Several algorithms were tested, including Logistic Regression, Random Forest, Gradient Boosting, XGBoost, LightGBM, Decision Tree, and KNN.
 
-The best-performing models were LightGBM and XGBoost. LightGBM had slightly better Accuracy, Recall, and F1-score, while XGBoost achieved the highest ROC-AUC.
+Hyperparameter search uses repeated stratified three-fold cross-validation (two repeats), with preprocessing fitted inside each fold. The selected model is chosen by mean training-fold ROC-AUC; the stratified 20% holdout is used only for final reporting. Calibration is summarized with the Brier score and a reliability plot.
 
-Test metrics:
+The churn classification cutoff is 0.50 under an equal false-positive/false-negative cost assumption. Risk levels consistently use Low below 0.30, Medium from 0.30 to below 0.70, and High at or above 0.70. These are explicit initial policy choices rather than business-optimized thresholds.
 
-- LightGBM: Accuracy 0.9436, Precision 0.9564, Recall 0.9412, F1-score 0.9487, ROC-AUC 0.9826
-- XGBoost: Accuracy 0.9429, Precision 0.9565, Recall 0.9396, F1-score 0.9480, ROC-AUC 0.9829
+The latest training run evaluated seven models using repeated stratified three-fold cross-validation (two repeats) on training data, then reported metrics on an untouched stratified 20% holdout. LightGBM was selected by mean CV ROC-AUC. Holdout metrics are reporting-only.
+
+| Model | CV ROC-AUC (mean ± std) | Accuracy | Precision | Recall | F1 | Holdout ROC-AUC | Brier |
+|---|---:|---:|---:|---:|---:|---:|---:|
+| LightGBM | **0.9818 ± 0.0009** | 0.9428 | 0.9555 | **0.9406** | 0.9480 | **0.9829** | 0.0448 |
+| Random Forest | 0.9810 ± 0.0004 | 0.9409 | 0.9566 | 0.9358 | 0.9461 | 0.9819 | 0.0461 |
+| Gradient Boosting | 0.9808 ± 0.0009 | **0.9438** | 0.9574 | 0.9404 | **0.9489** | 0.9828 | **0.0446** |
+| XGBoost | 0.9804 ± 0.0008 | 0.9412 | **0.9576** | 0.9353 | 0.9463 | 0.9811 | 0.0469 |
+| Decision Tree | 0.9708 ± 0.0011 | 0.9376 | 0.9504 | 0.9362 | 0.9433 | 0.9739 | 0.0507 |
+| KNN | 0.9584 ± 0.0005 | 0.9202 | 0.9369 | 0.9177 | 0.9272 | 0.9606 | 0.0656 |
+| Logistic Regression | 0.9334 ± 0.0011 | 0.8758 | 0.8745 | 0.9057 | 0.8899 | 0.9309 | 0.0974 |
+
+On the 14,455-row holdout, LightGBM classified 13,628 cases correctly (94.28%), with 6,094 true negatives, 351 false positives, 476 false negatives, and 7,534 true positives. The Brier score is 0.0448. Gradient Boosting has the highest holdout Accuracy and F1 and the lowest Brier score; XGBoost has the highest Precision. See [the comprehensive results report](docs/report.md) and [EDA analysis](docs/eda_analysis.md) for plots, segment diagnostics, and caveats.
 
 ## Run locally
-Install pyenv and python 3.12.14 
+The project pins Python 3.12.14 in `.python-version`. Create an environment and install dependencies:
 ```bash
-pyenv install 3.12.14
-pyenv local 3.12.14
-```
-
-Create and activate environment (below is eample for linux OS)
-```bash
-python -m vevn .ds_env
-source .ds_env/bin/activate
+python3.12 -m venv .venv
+source .venv/bin/activate
 ```
 
 ```bash
 pip install -r requirements.txt
 python src/model_training.py
+python src/model_evaluation.py
 streamlit run app/main.py
+```
+
+To run preprocessing, model creation, and evaluation together without deleting existing model files:
+
+```bash
+PYTHON=./.venv/bin/python bash run_all.sh
 ```
 
 ## Run with Docker
@@ -75,7 +82,7 @@ docker compose build --no-cache
 docker compose up -d
 ```
 
-For more details about the EDA rationale and technical specification, see [docs/eda_analysis.md](docs/eda_analysis.md) and [docs/technical_spec_en.md](docs/technical_spec_en.md) accordingly.
+For the model evaluation, saved plots, and interpretation caveats, see [docs/report.md](docs/report.md). The [EDA analysis](docs/eda_analysis.md) and [technical specification](docs/technical_spec_en.md) provide the analysis rationale and project requirements.
 
 ## Project structure
 
@@ -96,16 +103,18 @@ telecom-churn-prediction/
 │   └── raw/
 │       └── internet_service_churn.csv
 ├── docs/
-│   └── eda_analysis.md
-├── legacy_scripts/
-│   ├── test_extreme_cases.py
-│   └── test_predictions.py
+│   ├── eda_analysis.md
+│   ├── report.md
+│   └── technical_spec_en.md
 ├── models/
 │   ├── best_model.pkl
 │   ├── model_results.csv
 │   ├── plots/
+│   │   ├── calibration_curve.png
 │   │   ├── confusion_matrix.png
 │   │   ├── feature_importance.png
+│   │   ├── holdout_metrics.csv
+│   │   ├── missingness_diagnostics.csv
 │   │   ├── predictions_analysis.csv
 │   │   └── roc_curve.png
 │   └── preprocessor.pkl
@@ -114,9 +123,11 @@ telecom-churn-prediction/
 ├── src/
 │   ├── data_preprocessing.py
 │   ├── model_evaluation.py
+│   ├── prediction_policy.py
 │   └── model_training.py
 ├── tests/
 │   ├── conftest.py
+│   ├── test_prediction_policy.py
 │   ├── test_prediction_pipeline.py
 │   └── test_preprocessing.py
 ├── Dockerfile
@@ -145,9 +156,9 @@ telecom-churn-prediction/
 
 Основні характеристики датасету:
 
-- частка клієнтів, які відмовилися від послуг: приблизно 55.4%;
-- є пропуски в полях `remaining_contract`, `download_avg` та `upload_avg`;
-- серед ознак присутні як бінарні ознаки підписок, так і числові показники використання послуг і фінансової активності.
+- частка клієнтів, які відмовилися від послуг: приблизно 55.4% (помірний дисбаланс класів);
+- пропуски є у `remaining_contract` (21 572; 29.85%), `download_avg` (381; 0.53%) та `upload_avg` (381; 0.53%);
+- `download_over_limit` є числовим лічильником зі значеннями від 0 до 7, а не бінарною ознакою.
 
 ## EDA та обґрунтування підходу
 
@@ -158,12 +169,7 @@ telecom-churn-prediction/
 - базові статистичні характеристики числових ознак;
 - структуру та типи ознак, необхідних для подальшої обробки.
 
-Ці кроки були важливими, оскільки вони вплинули на вибір стратегій підготовки даних:
-
-- пропуски в числових ознаках було заповнено медіаною, а для категоріальних — модою;
-- для типових числових ознак застосовано стандартизацію;
-- для категоріальних ознак використано кодування через `LabelEncoder`;
-- через відносно збалансований розподіл цільової змінної було використано стратифікований розділ даних на train/test.
+Попередня обробка створює ознаку `remaining_contract_missing` і заповнює пропуски. Її параметри навчаються лише на тренувальних частинах CV-фолдів; holdout не використовується для підбору. Пропуски `remaining_contract` пов'язані з цільовою змінною: 49.24% записів із відтоком і 5.75% записів без відтоку мають відсутнє значення. Це потребує перевірки джерела даних, але не доводить причинного зв'язку.
 
 ## Попередня обробка даних
 
@@ -188,12 +194,19 @@ telecom-churn-prediction/
 - Decision Tree;
 - KNN.
 
-Найкращі результати показали LightGBM і XGBoost. За основними метриками LightGBM трохи випередив XGBoost за Accuracy, Recall і F1-score, тоді як XGBoost мав найвищий ROC-AUC.
+Модель обирається за середнім ROC-AUC повторної CV: обрано LightGBM (0.9818 ± 0.0009). На holdout із 14 455 записів Gradient Boosting має найвищі Accuracy та F1 і найнижчий Brier score; LightGBM має найвищий Recall, XGBoost — найвищий Precision. Універсального переможця за всіма метриками немає.
 
-Основні метрики на тестовому наборі:
+| Модель | CV ROC-AUC (середнє ± std) | Accuracy | Precision | Recall | F1 | Holdout ROC-AUC | Brier |
+|---|---:|---:|---:|---:|---:|---:|---:|
+| LightGBM | **0.9818 ± 0.0009** | 0.9428 | 0.9555 | **0.9406** | 0.9480 | **0.9829** | 0.0448 |
+| Random Forest | 0.9810 ± 0.0004 | 0.9409 | 0.9566 | 0.9358 | 0.9461 | 0.9819 | 0.0461 |
+| Gradient Boosting | 0.9808 ± 0.0009 | **0.9438** | 0.9574 | 0.9404 | **0.9489** | 0.9828 | **0.0446** |
+| XGBoost | 0.9804 ± 0.0008 | 0.9412 | **0.9576** | 0.9353 | 0.9463 | 0.9811 | 0.0469 |
+| Decision Tree | 0.9708 ± 0.0011 | 0.9376 | 0.9504 | 0.9362 | 0.9433 | 0.9739 | 0.0507 |
+| KNN | 0.9584 ± 0.0005 | 0.9202 | 0.9369 | 0.9177 | 0.9272 | 0.9606 | 0.0656 |
+| Logistic Regression | 0.9334 ± 0.0011 | 0.8758 | 0.8745 | 0.9057 | 0.8899 | 0.9309 | 0.0974 |
 
-- LightGBM: Accuracy 0.9436, Precision 0.9564, Recall 0.9412, F1-score 0.9487, ROC-AUC 0.9826
-- XGBoost: Accuracy 0.9429, Precision 0.9565, Recall 0.9396, F1-score 0.9480, ROC-AUC 0.9829
+Матриця помилок для обраної LightGBM: 6 094 true negatives, 351 false positives, 476 false negatives і 7 534 true positives. Поріг класифікації 0.5 відповідає припущенню рівної вартості хибнонегативних і хибнопозитивних рішень. Деталі й застереження наведено у [звіті](docs/report.md) та [документі EDA](docs/eda_analysis.md).
 
 ## Запуск проєкту
 
@@ -205,25 +218,19 @@ telecom-churn-prediction/
 pip install -r requirements.txt
 ```
 
-2. Запустити створення препроцесора
-
-```bash
-python src/data_preprocessing.py
-```
-
-3. Навчіть модель:
+2. Навчіть моделі та створіть артефакти:
 
 ```bash
 python src/model_training.py
 ```
 
-4. Оновіть оцінку:
+3. Оновіть оцінку та графіки:
 
 ```bash
-python src/model_training.py
+python src/model_evaluation.py
 ```
 
-5. Запустіть веб-застосунок:
+4. Запустіть веб-застосунок:
 
 ```bash
 streamlit run app/main.py

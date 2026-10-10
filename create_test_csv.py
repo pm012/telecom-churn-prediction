@@ -1,6 +1,5 @@
 # create_test_csv.py
 import pandas as pd
-import numpy as np
 
 def create_test_csv():
     """Creating a test CSV file for batch processing"""

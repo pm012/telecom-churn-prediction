@@ -2,6 +2,9 @@
 import matplotlib.pyplot as plt
 import numpy as np
 
+from src.prediction_policy import HIGH_RISK_THRESHOLD, LOW_RISK_THRESHOLD
+
+
 class ResultVisualizer:
     """Visualization of prediction results"""
     
@@ -34,7 +37,7 @@ class ResultVisualizer:
     @staticmethod
     def get_recommendation(probability):
         """Getting recommendations based on probability"""
-        if probability >= 0.7:
+        if probability >= HIGH_RISK_THRESHOLD:
             return {
                 'type': 'error',
                 'title': 'Act immediately to retain the customer!',
@@ -44,7 +47,7 @@ class ResultVisualizer:
                     'Propose improvements to the service package'
                 ]
             }
-        elif probability >= 0.4:
+        elif probability >= LOW_RISK_THRESHOLD:
             return {
                 'type': 'warning',
                 'title': 'Recommendation: Monitor customer behavior',

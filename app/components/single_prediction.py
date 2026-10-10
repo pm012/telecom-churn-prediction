@@ -3,6 +3,13 @@ import streamlit as st
 import pandas as pd
 import matplotlib.pyplot as plt
 
+from src.prediction_policy import (
+    CHURN_DECISION_THRESHOLD,
+    HIGH_RISK_THRESHOLD,
+    LOW_RISK_THRESHOLD,
+)
+
+
 class SinglePredictionComponent:
     """Component for single customer prediction"""
     
@@ -14,6 +21,11 @@ class SinglePredictionComponent:
         """Displaying the form and results"""
         st.header("Prediction for a Single Customer")
         st.markdown("Enter customer data to get a prediction.")
+        st.caption(
+            f"Churn cutoff: {CHURN_DECISION_THRESHOLD:.0%} (equal-cost assumption). "
+            f"Risk bands: Low < {LOW_RISK_THRESHOLD:.0%}, "
+            f"Medium < {HIGH_RISK_THRESHOLD:.0%}, High >= {HIGH_RISK_THRESHOLD:.0%}."
+        )
         
         col1, col2, col3 = st.columns(3)
         
@@ -60,8 +72,8 @@ class SinglePredictionComponent:
                 min_value=0.0, max_value=500.0, value=50.0, step=5.0
             )
             download_over_limit = st.selectbox(
-                "Download Over Limit", [0, 1],
-                format_func=lambda x: "Yes" if x else "No"
+                "Times Over Download Limit", list(range(8)),
+                help="This training field is a count with observed values from 0 to 7."
             )
 
 

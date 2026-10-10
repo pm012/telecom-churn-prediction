@@ -1,50 +1,33 @@
 #!/bin/bash
-# run_all.sh - Повний запуск проекту
+# run_all.sh - Train and evaluate churn models without deleting existing artifacts.
+
+set -e
+PYTHON="${PYTHON:-python}"
 
 echo "=========================================="
 echo "FULL PROJECT RUN"
 echo "=========================================="
 
-# 1. Cleaning old models
+# 1. Ensure output directories exist; keep previous artifacts if a later step fails.
 echo ""
-echo "[1/5] Cleaning old models..."
-rm -rf models/
-mkdir -p models
-echo "Models folder cleared"
+echo "[1/3] Preparing output directories..."
+mkdir -p models models/plots
 
-# 2. Data preprocessing
+# 2. Training and fold-local preprocessing
 echo ""
-echo "[2/5] Running data_preprocessing.py..."
-python src/data_preprocessing.py
-if [ $? -ne 0 ]; then
-    echo "Error in data_preprocessing.py"
-    exit 1
-fi
-echo "data_preprocessing.py completed"
-
-# 3. Training models
-echo ""
-echo "[3/5] Running model_training.py..."
-python src/model_training.py
-if [ $? -ne 0 ]; then
-    echo "Error in model_training.py"
-    exit 1
-fi
+echo "[2/3] Running model_training.py..."
+"$PYTHON" src/model_training.py
 echo "model_training.py completed"
 
-# 4. Model evaluation
+# 3. Model evaluation
 echo ""
-echo "[4/5] Running model_evaluation.py..."
-python src/model_evaluation.py
-if [ $? -ne 0 ]; then
-    echo "Error in model_evaluation.py"
-    exit 1
-fi
+echo "[3/3] Running model_evaluation.py..."
+"$PYTHON" src/model_evaluation.py
 echo "model_evaluation.py completed"
 
 # 5. Final check
 echo ""
-echo "[5/5] Checking results..."
+echo "[4/4] Checking results..."
 ls -lh models/*.pkl 2>/dev/null || echo "Models not found"
 ls -lh models/*.csv 2>/dev/null || echo "Results not found"
 
