@@ -4,8 +4,23 @@ import pandas as pd
 import sys
 import os
 from datetime import datetime
+#sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+# Configure import paths for Python
+current_dir = os.path.dirname(os.path.abspath(__file__)) # папка 'app'
+project_root = os.path.dirname(current_dir)              # корінь проекту
+if project_root not in sys.path:
+    sys.path.append(project_root)
 
-sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+# Define absolute path to favicon.png inside the app/assets folder
+favicon_path = os.path.join(current_dir, "assets", "favicon.png")
+
+# FIRST CALL TO STREAMLIT (Mandatory!)
+st.set_page_config(
+    page_title="Prediction of Customer Churn",
+    page_icon=favicon_path,  
+    layout="wide",  
+    initial_sidebar_state="expanded"
+)
 
 from app.core.model_manager import ModelManager
 from app.core.predictor import ChurnPredictor
@@ -14,38 +29,6 @@ from app.components.sidebar import Sidebar
 from app.components.single_prediction import SinglePredictionComponent
 from app.components.batch_prediction import BatchPredictionComponent
 
-
-# Note if  sidebar breaks just remove this settings
-#====================Settings for sidebar========================
-st.markdown("""
-<style>
-    /* Removes usless scroll in sidebar */
-    section[data-testid="stSidebar"] > div:first-child {
-        overflow-y: auto;
-        height: auto;
-    }
-    section[data-testid="stSidebar"] > div:first-child > div:first-child {
-        overflow-y: visible;
-    }
-    /* Hides scrollbar if not needed */
-    section[data-testid="stSidebar"]::-webkit-scrollbar {
-        width: 6px;
-    }
-    section[data-testid="stSidebar"]::-webkit-scrollbar-thumb {
-        background-color: rgba(255, 255, 255, 0.2);
-        border-radius: 3px;
-    }
-</style>
-""", unsafe_allow_html=True)
-
-
-# Page configuration
-st.set_page_config(
-    page_title="Prediction of Customer Churn",
-    page_icon="📊",
-    layout="wide",
-    initial_sidebar_state="expanded"
-)
 
 # Header
 st.title("Prediction of Customer Churn")
@@ -70,8 +53,8 @@ if selected_model is None:
     st.error("No available models for prediction.")
     st.stop()
 
-# === Selected Model — під заголовком, той самий шрифт, що й title ===
-st.markdown(f"## Selected Model: {selected_model}")
+# === Selected Model — underer header, the same font as the title ===
+st.markdown(f"## \U0001F449 Selected Model: {selected_model}")
 
 st.markdown("""
 This application uses machine learning to predict the probability of customer churn.
@@ -92,7 +75,7 @@ if mode == "Single Client":
 else:
     BatchPredictionComponent(predictor).render()
 
-# === Comparison of Models — над футером ===
+# === Comparison of Models — placed intentionally above the page footer===
 st.divider()
 Sidebar.render_model_comparison(model_results, selected_model)
 

@@ -15,10 +15,10 @@ class SinglePredictionComponent:
         st.header("Prediction for a Single Customer")
         st.markdown("Enter customer data to get a prediction.")
         
-        col1, col2 = st.columns(2)
+        col1, col2, col3 = st.columns(3)
         
         with col1:
-            st.subheader("Demographic Data")
+            st.subheader("Subscription Data")
             is_tv = st.selectbox(
                 "TV Subscription", [0, 1],
                 format_func=lambda x: "Yes" if x else "No"
@@ -31,17 +31,10 @@ class SinglePredictionComponent:
                 "Subscription Duration (months)",
                 min_value=0.0, max_value=120.0, value=12.0, step=0.5
             )
+            
         
         with col2:
-            st.subheader("Usage Data")
-            bill_avg = st.number_input(
-                "Average Bill",
-                min_value=0.0, max_value=500.0, value=50.0, step=5.0
-            )
-            remaining_contract = st.number_input(
-                "Remaining Contract (months)",
-                min_value=0.0, max_value=36.0, value=6.0, step=0.5
-            )
+            st.subheader("Usage Data")            
             service_failures = st.number_input(
                 "Service Failure Count",
                 min_value=0, max_value=50, value=0, step=1
@@ -54,10 +47,25 @@ class SinglePredictionComponent:
                 "Average Upload (Mbps)",
                 min_value=0.0, max_value=100.0, value=5.0, step=1.0
             )
+           
+
+        with col3:
+            st.subheader("Contract Data")
+            remaining_contract = st.number_input(
+                "Remaining Contract (months)",
+                 min_value=0.0, max_value=36.0, value=6.0, step=0.5
+            )
+            bill_avg = st.number_input(
+                "Average Bill",
+                min_value=0.0, max_value=500.0, value=50.0, step=5.0
+            )
             download_over_limit = st.selectbox(
                 "Download Over Limit", [0, 1],
                 format_func=lambda x: "Yes" if x else "No"
             )
+
+
+
         
         if st.button("Predict Churn", type="primary"):
             customer_data = {

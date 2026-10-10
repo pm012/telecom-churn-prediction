@@ -1,6 +1,5 @@
 # app/components/sidebar.py
 import streamlit as st
-import pandas as pd
 
 class Sidebar:
     """Component for the sidebar"""
@@ -47,7 +46,7 @@ class Sidebar:
             st.divider()
             
             # === Working mode ===
-            st.header("Working Mode")
+            #st.header("Working Mode")
             mode = st.radio(
                 "Select working mode:",
                 ["Single Client", "Batch Processing (CSV file)"],
@@ -69,7 +68,7 @@ class Sidebar:
         if model_results is None or len(model_results) == 0:
             return
         
-        st.header("📊 Comparison of Models")
+        st.header("\U0001F4CA Comparison of Models")
         st.markdown("All trained models, sorted by ROC-AUC (best first). The current model is highlighted.")
         
         # Prepare display DataFrame
@@ -77,7 +76,7 @@ class Sidebar:
         
         # Add star to selected model
         display_df['Model'] = display_df['Model'].apply(
-            lambda x: f"⭐ {x}" if x == selected_model else x
+            lambda x: f"\U000025B6\U0000FE0F {x}" if x == selected_model else x
         )
         
         # Format numeric columns
@@ -118,8 +117,8 @@ class Sidebar:
         )
         
         # Bar chart — fallback (to make it more visual)
-        with st.expander("📈 Visual comparison (ROC-AUC)", expanded=True):
+        with st.expander("Visual comparison (ROC-AUC)", expanded=True):
             # Simplified to built-in horizontal bar chart for maximum compatibility
             chart_df = model_results.set_index('Model')['roc_auc'].sort_values(ascending=False)
-            st.bar_chart(chart_df, horizontal=True, height=300, color="#4B8BBE")
-            st.caption(f"⭐ Selected: **{selected_model}**")
+            st.bar_chart(chart_df, horizontal=False, height=300, width='stretch', color="#276ECA")
+            st.caption(f"\U00002705 Selected: **{selected_model}**")

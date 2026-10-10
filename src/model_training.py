@@ -156,14 +156,6 @@ class ModelTrainer:
     def train_all_models(self, X_train, y_train, X_test, y_test, tune_hyperparams=True):
         """Train and evaluate all models"""
         self.create_models()
-        
-        # === DEBUG ===
-        print(f"\n[DEBUG] X_train shape: {np.asarray(X_train).shape}, type: {type(X_train)}")
-        print(f"[DEBUG] y_train shape: {np.asarray(y_train).shape}, type: {type(y_train)}, dtype: {np.asarray(y_train).dtype}")
-        print(f"[DEBUG] y_train first 5: {np.asarray(y_train).flatten()[:5]}")
-        print(f"[DEBUG] y_train unique: {np.unique(np.asarray(y_train))}")
-        print(f"[DEBUG] y_test shape: {np.asarray(y_test).shape}")
-        # === /DEBUG ===
     
         for model_name in self.models.keys():
             for model_name in self.models.keys():

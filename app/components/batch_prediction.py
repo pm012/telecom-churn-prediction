@@ -146,54 +146,35 @@ class BatchPredictionComponent:
                 st.warning(f"Pie chart unavailable: {e}")
         
         with viz_col2:
-            # --- Bar chart: churn rate by risk levels ---
             try:
                 import plotly.express as px
                 
-                risk_stats = results.groupby('risk_level').agg(
-                    total=('churn_prediction', 'size'),
-                    churned=('churn_prediction', 'sum'),
-                ).reset_index()
-                risk_stats['churn_rate'] = risk_stats['churned'] / risk_stats['total']
-                
-                # Sort by logical order of risk
-                risk_stats['_order'] = risk_stats['risk_level'].map(
-                    {'Low': 0, 'Medium': 1, 'High': 2}
-                ).fillna(99)
-                risk_stats = risk_stats.sort_values('_order').drop(columns='_order')
-                
-                fig_bar = px.bar(
-                    risk_stats,
-                    x='risk_level',
-                    y='churn_rate',
+                fig = px.histogram(
+                    results,
+                    x='churn_probability',
+                    nbins=20,
                     color='risk_level',
                     color_discrete_map={
-                        'Low': risk_colors['Low'],
-                        'Medium': risk_colors['Medium'],
-                        'High': risk_colors['High'],
+                        'Low': '#2ECC71',
+                        'Medium': '#F39C12',
+                        'High': '#E74C3C',
                     },
-                    text=risk_stats['churn_rate'].apply(lambda x: f"{x*100:.0f}%"),
-                    labels={'risk_level': 'Risk Level', 'churn_rate': 'Churn Rate'},
+                    category_orders={'risk_level': ['Low', 'Medium', 'High']},
+                    labels={'churn_probability': 'Churn Probability', 'count': 'Customers'},
                 )
-                fig_bar.update_traces(
-                    textposition='outside',
-                    hovertemplate='<b>%{x}</b><br>Churn Rate: %{y:.1%}<extra></extra>'
-                )
-                fig_bar.update_layout(
-                    showlegend=False,
-                    yaxis_tickformat='.0%',
-                    yaxis_range=[0, 1.1],
-                    margin=dict(t=20, b=20, l=20, r=20),
+                fig.update_layout(
+                    xaxis_title='Churn Probability',
+                    yaxis_title='Number of Customers',
+                    xaxis=dict(tickformat='.0%', range=[0, 1]),
+                    legend=dict(orientation='h', yanchor='bottom', y=1.02, xanchor='right', x=1),
+                    margin=dict(t=40, b=20, l=20, r=20),
                     height=350,
+                    bargap=0.05,
                 )
-                st.plotly_chart(fig_bar, width='stretch')
-            except ImportError:
-                # Fallback without plotly
-                risk_stats = results.groupby('risk_level')['churn_prediction'].mean()
-                st.bar_chart(risk_stats)
+                st.plotly_chart(fig, width='stretch')
             except Exception as e:
-                st.warning(f"Bar chart unavailable: {e}")
-        
+                st.warning(f"Histogram unavailable: {e}")
+                    
         # === Detailed Results ===
         st.subheader("Detailed Results")
         st.dataframe(results, width='stretch', hide_index=True)
