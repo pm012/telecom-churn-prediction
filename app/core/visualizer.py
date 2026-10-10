@@ -57,9 +57,9 @@ class ResultVisualizer:
         else:
             return {
                 'type': 'success',
-                'title': 'Клієнт задоволений, продовжуйте поточну стратегію',
+                'title': 'Client is satisfied, continue the current strategy',
                 'actions': [
-                    'Продовжувати якісне обслуговування',
-                    'Інформувати про нові послуги'
+                    'Continue providing quality service',
+                    'Inform about new services'
                 ]
             }
